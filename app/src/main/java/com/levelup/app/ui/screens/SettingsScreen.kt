@@ -54,7 +54,7 @@ fun TimeField(label: String, minute: Int, modifier: Modifier = Modifier, onValid
 }
 
 @Composable
-fun SettingsScreen(vm: SettingsViewModel) {
+fun SettingsScreen(vm: SettingsViewModel, onOpenBlocker: () -> Unit) {
     val s by vm.settings.collectAsStateWithLifecycle()
     val status by vm.statusMessage.collectAsStateWithLifecycle()
     var name by remember(s.displayName) { mutableStateOf(s.displayName) }
@@ -113,6 +113,9 @@ fun SettingsScreen(vm: SettingsViewModel) {
             Button(onClick = { cap.toIntOrNull()?.let { c -> vm.update { it.copy(focusDailyCapMinutes = c.coerceIn(0, 1440)) } } }) { Text("Save") }
         }
 
+        SectionTitle("Distraction protection")
+        OutlinedButton(onClick = onOpenBlocker, modifier = Modifier.fillMaxWidth()) { Text("Choose apps & protection rules") }
+
         SectionTitle("Your data")
         Text(
             "Everything stays on this device. No account, no analytics, no network permission.",
@@ -126,8 +129,8 @@ fun SettingsScreen(vm: SettingsViewModel) {
 
         SectionTitle("Not included yet")
         Text(
-            "• Selected-app blocking is not implemented. Android cannot reliably detect content inside other apps, " +
-                "and it needs Usage Access / Accessibility permissions that this version does not request.\n" +
+            "• Distraction protection only notices when an app you selected opens during a focus session. " +
+                "It cannot see what you do inside an app, cannot detect adult content or reels, and cannot stop an app from opening.\n" +
                 "• Premium and Google Play Billing are not implemented; nothing here is locked or for sale.\n" +
                 "• Sleep and break blocks are ordinary tasks for now.",
             style = MaterialTheme.typography.bodySmall,

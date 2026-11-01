@@ -42,3 +42,21 @@ class SystemEventReceiver : BroadcastReceiver() {
         }
     }
 }
+
+/** "Emergency pause" action on the interruption notification. */
+class GuardActionReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action != com.levelup.app.service.GuardNotifier.ACTION_EMERGENCY) return
+        val container = (context.applicationContext as LevelUpApp).container
+        val pending = goAsync()
+        CoroutineScope(Dispatchers.Default).launch {
+            try {
+                container.repository.pauseProtection(10, emergency = true)
+                androidx.core.app.NotificationManagerCompat.from(context)
+                    .cancel(com.levelup.app.service.GuardNotifier.ALERT_NOTIFICATION_ID)
+            } finally {
+                pending.finish()
+            }
+        }
+    }
+}

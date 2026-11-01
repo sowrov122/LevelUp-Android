@@ -43,7 +43,7 @@ import com.levelup.app.ui.viewmodel.FocusViewModel
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun FocusScreen(vm: FocusViewModel) {
+fun FocusScreen(vm: FocusViewModel, onOpenBlocker: () -> Unit) {
     val state by vm.state.collectAsStateWithLifecycle()
     var title by rememberSaveable { mutableStateOf("") }
     var preset by rememberSaveable { mutableIntStateOf(25) }
@@ -165,6 +165,8 @@ fun FocusScreen(vm: FocusViewModel) {
                 }
             }
         }
+
+        TextButton(onClick = onOpenBlocker) { Text("Distraction protection settings") }
 
         SectionTitle("Observatory milestones")
         Observatory.milestones.forEach { m ->

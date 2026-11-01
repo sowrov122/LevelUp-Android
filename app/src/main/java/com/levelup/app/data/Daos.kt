@@ -202,3 +202,42 @@ interface OwnedRewardDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertIgnore(o: OwnedRewardEntity): Long
 }
+
+@Dao
+interface BlockedAppDao {
+    @Query("SELECT * FROM blocked_apps ORDER BY displayName COLLATE NOCASE")
+    fun observeAll(): Flow<List<BlockedAppEntity>>
+
+    @Query("SELECT * FROM blocked_apps ORDER BY displayName COLLATE NOCASE")
+    suspend fun getAll(): List<BlockedAppEntity>
+
+    @Query("SELECT * FROM blocked_apps WHERE packageName = :pkg")
+    suspend fun get(pkg: String): BlockedAppEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(app: BlockedAppEntity)
+
+    @Query("DELETE FROM blocked_apps WHERE packageName = :pkg")
+    suspend fun delete(pkg: String)
+
+    @Query("UPDATE blocked_apps SET isEnabled = :enabled WHERE packageName = :pkg")
+    suspend fun setEnabled(pkg: String, enabled: Boolean)
+}
+
+@Dao
+interface InterruptionDao {
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insert(event: InterruptionEventEntity): Long
+
+    @Query("SELECT * FROM interruption_events ORDER BY detectedAt DESC LIMIT :limit")
+    fun observeRecent(limit: Int): Flow<List<InterruptionEventEntity>>
+
+    @Query("SELECT * FROM interruption_events ORDER BY detectedAt")
+    suspend fun getAll(): List<InterruptionEventEntity>
+
+    @Query("SELECT MAX(detectedAt) FROM interruption_events WHERE packageName = :pkg")
+    suspend fun lastEventTime(pkg: String): Long?
+
+    @Query("SELECT MAX(detectedAt) FROM interruption_events WHERE packageName = :pkg AND actionTaken = 'PENALIZED'")
+    suspend fun lastPenaltyTime(pkg: String): Long?
+}

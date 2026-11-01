@@ -4,7 +4,12 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.levelup.app.AppContainer
+import android.content.Intent
+import com.levelup.app.data.BlockedAppEntity
 import com.levelup.app.data.FocusSessionEntity
+import com.levelup.app.data.InterruptionEventEntity
+import com.levelup.app.service.EssentialApps
+import com.levelup.app.service.UsageAccess
 import com.levelup.app.data.LevelUpRepository
 import com.levelup.app.data.PurchaseResult
 import com.levelup.app.data.RoutineTaskEntity
@@ -413,4 +418,88 @@ class OnboardingViewModel(private val repo: LevelUpRepository) : ViewModel() {
             }
         }
     }
+}
+
+// ============================================ Distraction protection
+
+data class InstalledApp(val packageName: String, val label: String)
+
+data class BlockerUiState(
+    val settings: UserSettings = UserSettings(),
+    val usageAccess: Boolean = false,
+    val selected: List<BlockedAppEntity> = emptyList(),
+    val installed: List<InstalledApp> = emptyList(),
+    val interruptions: List<InterruptionEventEntity> = emptyList(),
+    val query: String = "",
+    val loadingApps: Boolean = true,
+    val nowMs: Long = 0L,
+)
+
+class BlockerViewModel(private val container: AppContainer) : ViewModel() {
+    private val repo = container.repository
+    private val usageAccess = MutableStateFlow(UsageAccess.isGranted(container.appContext))
+    private val installed = MutableStateFlow<List<InstalledApp>>(emptyList())
+    private val loading = MutableStateFlow(true)
+    private val query = MutableStateFlow("")
+
+    private data class Base(
+        val settings: UserSettings,
+        val access: Boolean,
+        val selected: List<BlockedAppEntity>,
+        val installed: List<InstalledApp>,
+        val interruptions: List<InterruptionEventEntity>,
+    )
+
+    val state: StateFlow<BlockerUiState> = combine(
+        combine(repo.settingsFlow, usageAccess, repo.observeBlockedApps(), installed, repo.observeInterruptions(40)) { s, a, sel, inst, hist ->
+            Base(s, a, sel, inst, hist)
+        },
+        query, loading, ticker(15_000),
+    ) { b, q, l, now ->
+        BlockerUiState(b.settings, b.access, b.selected, b.installed, b.interruptions, q, l, now)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BlockerUiState())
+
+    init {
+        loadInstalledApps()
+    }
+
+    fun refreshAccess() { usageAccess.value = UsageAccess.isGranted(container.appContext) }
+    fun setQuery(q: String) { query.value = q }
+
+    private fun loadInstalledApps() {
+        viewModelScope.launch {
+            val apps = withContext(Dispatchers.IO) {
+                val pm = container.appContext.packageManager
+                val essentials = EssentialApps.all(container.appContext)
+                val launcher = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+                @Suppress("DEPRECATION")
+                pm.queryIntentActivities(launcher, 0)
+                    .map { InstalledApp(it.activityInfo.packageName, it.loadLabel(pm).toString()) }
+                    .distinctBy { it.packageName }
+                    .filter { it.packageName !in essentials }
+                    .sortedBy { it.label.lowercase() }
+            }
+            installed.value = apps
+            loading.value = false
+        }
+    }
+
+    fun setEnabled(enabled: Boolean) { viewModelScope.launch { repo.updateSettingsQuiet { it.copy(blockerEnabled = enabled) } } }
+
+    fun toggleApp(app: InstalledApp, selected: Boolean) {
+        viewModelScope.launch { repo.setAppSelected(app.packageName, app.label, selected) }
+    }
+
+    fun removeApp(packageName: String) { viewModelScope.launch { repo.setAppSelected(packageName, "", false) } }
+
+    fun saveRules(penalty: Int, cooldownSeconds: Int) {
+        viewModelScope.launch {
+            repo.updateSettingsQuiet {
+                it.copy(blockerPenaltyPoints = penalty.coerceIn(0, 50), blockerCooldownSeconds = cooldownSeconds.coerceIn(30, 3600))
+            }
+        }
+    }
+
+    fun pause(minutes: Int) { viewModelScope.launch { repo.pauseProtection(minutes, emergency = false) } }
+    fun resume() { viewModelScope.launch { repo.resumeProtection() } }
 }

@@ -18,8 +18,10 @@ enum class TaskStatus { PENDING, COMPLETED, SKIPPED, MISSED }
 enum class FocusStatus { RUNNING, PAUSED, COMPLETED, CANCELLED }
 
 enum class ScoreEventType {
-    TASK_COMPLETED, TASK_REVERSED, FOCUS_COMPLETED, DAILY_BONUS, ACHIEVEMENT, REWARD_PURCHASE
+    TASK_COMPLETED, TASK_REVERSED, FOCUS_COMPLETED, DAILY_BONUS, ACHIEVEMENT, REWARD_PURCHASE, DISTRACTION_PENALTY
 }
+
+enum class InterruptionAction { PENALIZED, LOGGED_ONLY, OVERRIDE }
 
 /** Integer-only reward bundle. Points = today's behaviour score, XP = long-term, coins = spendable. */
 data class Reward(val points: Int = 0, val xp: Int = 0, val coins: Int = 0) {

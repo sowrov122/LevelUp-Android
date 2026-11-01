@@ -13,18 +13,25 @@ import com.levelup.app.ui.AppRoot
 
 class MainActivity : ComponentActivity() {
     private var openTaskId by mutableStateOf<String?>(null)
+    private var openDest by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         openTaskId = intent?.getStringExtra(ReminderManager.EXTRA_TASK_ID)
+        openDest = intent?.getStringExtra(EXTRA_DEST)
         val container = (application as LevelUpApp).container
-        setContent { AppRoot(container, openTaskId) { openTaskId = null } }
+        setContent { AppRoot(container, openTaskId, { openTaskId = null }, openDest) { openDest = null } }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         openTaskId = intent.getStringExtra(ReminderManager.EXTRA_TASK_ID)
+        openDest = intent.getStringExtra(EXTRA_DEST)
+    }
+
+    companion object {
+        const val EXTRA_DEST = "dest"
     }
 }

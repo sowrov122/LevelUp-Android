@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -26,6 +27,12 @@ data class UserSettings(
     val notificationsEnabled: Boolean = true,
     val accentThemeId: String = "default",
     val focusDailyCapMinutes: Int = 120,
+    /** Master switch for distraction protection. Off by default; nothing is observed while off. */
+    val blockerEnabled: Boolean = false,
+    val blockerPenaltyPoints: Int = 5,
+    val blockerCooldownSeconds: Int = 300,
+    /** Epoch millis until which protection is paused (user pause / emergency override). */
+    val blockerPausedUntilMs: Long = 0L,
 )
 
 class SettingsStore(private val context: Context) {
@@ -41,6 +48,10 @@ class SettingsStore(private val context: Context) {
         val NOTIF = booleanPreferencesKey("notifications_enabled")
         val ACCENT = stringPreferencesKey("accent_theme")
         val FOCUS_CAP = intPreferencesKey("focus_daily_cap")
+        val BLOCK_ON = booleanPreferencesKey("blocker_enabled")
+        val BLOCK_PENALTY = intPreferencesKey("blocker_penalty")
+        val BLOCK_COOLDOWN = intPreferencesKey("blocker_cooldown")
+        val BLOCK_PAUSED = longPreferencesKey("blocker_paused_until")
     }
 
     val flow: Flow<UserSettings> = context.settingsDataStore.data.map { it.toSettings() }
@@ -61,6 +72,10 @@ class SettingsStore(private val context: Context) {
             p[K.NOTIF] = n.notificationsEnabled
             p[K.ACCENT] = n.accentThemeId
             p[K.FOCUS_CAP] = n.focusDailyCapMinutes
+            p[K.BLOCK_ON] = n.blockerEnabled
+            p[K.BLOCK_PENALTY] = n.blockerPenaltyPoints
+            p[K.BLOCK_COOLDOWN] = n.blockerCooldownSeconds
+            p[K.BLOCK_PAUSED] = n.blockerPausedUntilMs
         }
     }
 
@@ -82,6 +97,10 @@ class SettingsStore(private val context: Context) {
             notificationsEnabled = this[K.NOTIF] ?: d.notificationsEnabled,
             accentThemeId = this[K.ACCENT] ?: d.accentThemeId,
             focusDailyCapMinutes = this[K.FOCUS_CAP] ?: d.focusDailyCapMinutes,
+            blockerEnabled = this[K.BLOCK_ON] ?: d.blockerEnabled,
+            blockerPenaltyPoints = this[K.BLOCK_PENALTY] ?: d.blockerPenaltyPoints,
+            blockerCooldownSeconds = this[K.BLOCK_COOLDOWN] ?: d.blockerCooldownSeconds,
+            blockerPausedUntilMs = this[K.BLOCK_PAUSED] ?: d.blockerPausedUntilMs,
         )
     }
 }

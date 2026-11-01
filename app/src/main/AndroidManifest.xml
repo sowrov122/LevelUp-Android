@@ -1,11 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Just-in-time permission, requested only after an in-app explanation (Android 13+). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Only used to re-create reminder alarms after a reboot. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- No INTERNET permission: the app is fully offline. -->
+
+    <!-- Distraction protection (optional, off by default). Usage Access is granted by the user in
+         Android Settings; nothing is observed until then. -->
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
+    <!-- Lets the app list launchable apps for the picker without the broad QUERY_ALL_PACKAGES permission. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
 
     <application
         android:name=".LevelUpApp"
@@ -29,6 +44,19 @@
         <receiver
             android:name=".notifications.ReminderReceiver"
             android:exported="false" />
+
+        <receiver
+            android:name=".notifications.GuardActionReceiver"
+            android:exported="false" />
+
+        <service
+            android:name=".service.FocusGuardService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Detects when user-selected distracting apps open during an active focus session" />
+        </service>
 
         <receiver
             android:name=".notifications.SystemEventReceiver"

@@ -6,6 +6,9 @@ import com.levelup.app.data.LevelUpDatabase
 import com.levelup.app.data.LevelUpRepository
 import com.levelup.app.data.SettingsStore
 import com.levelup.app.notifications.ReminderManager
+import com.levelup.app.service.EssentialApps
+import com.levelup.app.service.GuardController
+import com.levelup.app.service.GuardNotifier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -17,7 +20,12 @@ class AppContainer(context: Context) {
     val database: LevelUpDatabase = LevelUpDatabase.build(appContext)
     val settings = SettingsStore(appContext)
     val reminders = ReminderManager(appContext, database, settings)
-    val repository = LevelUpRepository(database, settings, reminders)
+    val repository = LevelUpRepository(
+        database, settings, reminders,
+        essentialPackages = { EssentialApps.all(appContext) },
+    )
+    val notifier = GuardNotifier(appContext)
+    val guard = GuardController(appContext, repository, settings)
 }
 
 class LevelUpApp : Application() {
@@ -30,6 +38,8 @@ class LevelUpApp : Application() {
         super.onCreate()
         container = AppContainer(this)
         ReminderManager.createChannel(this)
+        container.notifier.createChannels()
+        container.guard.observe(appScope)
         appScope.launch { container.repository.bootstrap() }
     }
 }

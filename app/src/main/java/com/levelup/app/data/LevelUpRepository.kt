@@ -6,6 +6,9 @@ import com.levelup.app.domain.Achievements
 import com.levelup.app.domain.Category
 import com.levelup.app.domain.DaySummary
 import com.levelup.app.domain.DayTaskFlag
+import com.levelup.app.domain.DistractionPolicy
+import com.levelup.app.domain.InterruptionAction
+import com.levelup.app.domain.InterruptionDecision
 import com.levelup.app.domain.FocusMath
 import com.levelup.app.domain.FocusOutcome
 import com.levelup.app.domain.FocusStatus
@@ -33,6 +36,8 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.util.UUID
 
+data class InterruptionResult(val displayName: String, val decision: InterruptionDecision, val penalty: Int)
+
 sealed interface PurchaseResult {
     data object Success : PurchaseResult
     data object AlreadyOwned : PurchaseResult
@@ -48,6 +53,7 @@ class LevelUpRepository(
     private val db: LevelUpDatabase,
     private val settings: SettingsStore,
     private val reminders: ReminderManager,
+    private val essentialPackages: () -> Set<String> = { emptySet() },
     private val nowMillis: () -> Long = { System.currentTimeMillis() },
     private val elapsedRealtime: () -> Long = { SystemClock.elapsedRealtime() },
 ) {
@@ -57,6 +63,8 @@ class LevelUpRepository(
     private val focusDao = db.focusSessionDao()
     private val achievementDao = db.achievementDao()
     private val ownedDao = db.ownedRewardDao()
+    private val blockedDao = db.blockedAppDao()
+    private val interruptionDao = db.interruptionDao()
 
     val settingsFlow: Flow<UserSettings> = settings.flow
 
@@ -517,6 +525,109 @@ class LevelUpRepository(
         settings.update { it.copy(accentThemeId = themeId) }
     }
 
+    // ------------------------------------------------- distraction protection
+
+    fun observeBlockedApps(): Flow<List<BlockedAppEntity>> = blockedDao.observeAll()
+    fun observeInterruptions(limit: Int): Flow<List<InterruptionEventEntity>> = interruptionDao.observeRecent(limit)
+
+    suspend fun setAppSelected(packageName: String, label: String, selected: Boolean) {
+        if (selected) {
+            if (packageName in essentialPackages()) return // essential apps can never be restricted
+            blockedDao.upsert(BlockedAppEntity(packageName, label, true, nowMillis()))
+        } else {
+            blockedDao.delete(packageName)
+        }
+    }
+
+    suspend fun setAppRuleEnabled(packageName: String, enabled: Boolean) = blockedDao.setEnabled(packageName, enabled)
+
+    /** Settings changes that must not trigger a reminder reschedule. */
+    suspend fun updateSettingsQuiet(transform: (UserSettings) -> UserSettings) = settings.update(transform)
+
+    suspend fun isProtectionActive(): Boolean {
+        val s = settings.current()
+        return s.blockerEnabled && focusDao.getActive()?.status == FocusStatus.RUNNING
+    }
+
+    /**
+     * Called when a package reaches the foreground. Only user-selected, non-essential apps during a
+     * RUNNING focus session can ever produce an event; repeated events are deduplicated and a per-app
+     * cooldown prevents repeated deductions for one launch.
+     */
+    suspend fun handleForegroundEvent(packageName: String, eventTimeMs: Long): InterruptionResult? {
+        val app = blockedDao.get(packageName)?.takeIf { it.isEnabled } ?: return null
+        val s = settings.current()
+        val active = focusDao.getActive()
+        val verdict = DistractionPolicy.calculate(
+            eventTimeMs = eventTimeMs,
+            lastHandledEventMs = interruptionDao.lastEventTime(packageName),
+            lastPenaltyMs = interruptionDao.lastPenaltyTime(packageName),
+            penaltyPoints = s.blockerPenaltyPoints,
+            cooldownSeconds = s.blockerCooldownSeconds,
+            protectionEnabled = s.blockerEnabled,
+            focusRunning = active?.status == FocusStatus.RUNNING,
+            isSelectedApp = true,
+            isEssential = packageName in essentialPackages(),
+            pausedUntilMs = s.blockerPausedUntilMs,
+        )
+        if (verdict.decision == InterruptionDecision.IGNORE || verdict.decision == InterruptionDecision.DUPLICATE) return null
+
+        val date = LocalDate.ofInstant(Instant.ofEpochMilli(eventTimeMs), TimeUtils.zoneOf(s.timezoneId)).toString()
+        val penalize = verdict.decision == InterruptionDecision.PENALIZE
+        db.withTransaction {
+            val inserted = interruptionDao.insert(
+                InterruptionEventEntity(
+                    id = UUID.randomUUID().toString(),
+                    packageName = packageName,
+                    displayName = app.displayName,
+                    detectedAt = eventTimeMs,
+                    focusSessionId = active?.id,
+                    actionTaken = if (penalize) InterruptionAction.PENALIZED else InterruptionAction.LOGGED_ONLY,
+                    pointsPenalty = verdict.penaltyPoints,
+                    idempotencyKey = "intr:$packageName:$eventTimeMs",
+                ),
+            )
+            if (inserted != -1L && penalize) {
+                scoreDao.insert(
+                    ScoreEventEntity(
+                        id = UUID.randomUUID().toString(),
+                        eventType = ScoreEventType.DISTRACTION_PENALTY,
+                        referenceId = "intr:$packageName:$eventTimeMs",
+                        localDate = date,
+                        pointsDelta = -verdict.penaltyPoints,
+                        xpDelta = 0,
+                        coinsDelta = 0,
+                        occurredAt = eventTimeMs,
+                        idempotencyKey = "penalty:$packageName:$eventTimeMs",
+                        note = "Opened ${app.displayName} during focus",
+                    ),
+                )
+            }
+        }
+        return InterruptionResult(app.displayName, verdict.decision, verdict.penaltyPoints)
+    }
+
+    /** User-initiated pause or emergency override. Always logged; never penalised. */
+    suspend fun pauseProtection(minutes: Int, emergency: Boolean) {
+        val now = nowMillis()
+        val mins = minutes.coerceIn(1, 240)
+        settings.update { it.copy(blockerPausedUntilMs = now + mins * 60_000L) }
+        interruptionDao.insert(
+            InterruptionEventEntity(
+                id = UUID.randomUUID().toString(),
+                packageName = "(pause)",
+                displayName = if (emergency) "Emergency override ($mins min)" else "Protection paused ($mins min)",
+                detectedAt = now,
+                focusSessionId = focusDao.getActive()?.id,
+                actionTaken = InterruptionAction.OVERRIDE,
+                pointsPenalty = 0,
+                idempotencyKey = "pause:$now",
+            ),
+        )
+    }
+
+    suspend fun resumeProtection() = settings.update { it.copy(blockerPausedUntilMs = 0L) }
+
     // ------------------------------------------------------- settings & data
 
     suspend fun updateSettings(transform: (UserSettings) -> UserSettings) {
@@ -559,6 +670,15 @@ class LevelUpRepository(
                 put(JSONObject().put("id", e.id).put("type", e.eventType.name).put("reference", e.referenceId)
                     .put("date", e.localDate).put("points", e.pointsDelta).put("xp", e.xpDelta)
                     .put("coins", e.coinsDelta).put("occurredAt", e.occurredAt).put("note", e.note ?: JSONObject.NULL))
+            }
+        })
+        root.put("selectedApps", JSONArray().apply {
+            blockedDao.getAll().forEach { put(JSONObject().put("package", it.packageName).put("name", it.displayName).put("enabled", it.isEnabled)) }
+        })
+        root.put("interruptions", JSONArray().apply {
+            interruptionDao.getAll().forEach {
+                put(JSONObject().put("package", it.packageName).put("name", it.displayName).put("detectedAt", it.detectedAt)
+                    .put("action", it.actionTaken.name).put("pointsPenalty", it.pointsPenalty))
             }
         })
         root.put("achievements", JSONArray().apply {

@@ -113,3 +113,28 @@ data class OwnedRewardEntity(
 data class KeyValue(val k: String, val v: Int)
 data class DaySummaryRow(val localDate: String, val total: Int, val completed: Int)
 data class RefNet(val referenceId: String, val points: Int, val xp: Int, val coins: Int, val events: Int)
+
+/** Apps the user explicitly chose to restrict. Opt-in only: nothing is ever blocked by default. */
+@Entity(tableName = "blocked_apps")
+data class BlockedAppEntity(
+    @PrimaryKey val packageName: String,
+    val displayName: String,
+    val isEnabled: Boolean,
+    val addedAt: Long,
+)
+
+/** Transparent history of every detected interruption (and every pause/override). */
+@Entity(
+    tableName = "interruption_events",
+    indices = [Index(value = ["idempotencyKey"], unique = true), Index("detectedAt")],
+)
+data class InterruptionEventEntity(
+    @PrimaryKey val id: String,
+    val packageName: String,
+    val displayName: String,
+    val detectedAt: Long,
+    val focusSessionId: String?,
+    val actionTaken: com.levelup.app.domain.InterruptionAction,
+    val pointsPenalty: Int,
+    val idempotencyKey: String,
+)

@@ -44,6 +44,7 @@ import androidx.navigation.compose.rememberNavController
 import com.levelup.app.AppContainer
 import com.levelup.app.data.UserSettings
 import com.levelup.app.domain.RewardCatalog
+import com.levelup.app.ui.screens.BlockerScreen
 import com.levelup.app.ui.screens.FocusScreen
 import com.levelup.app.ui.screens.OnboardingScreen
 import com.levelup.app.ui.screens.ProgressScreen
@@ -52,6 +53,7 @@ import com.levelup.app.ui.screens.RoutineScreen
 import com.levelup.app.ui.screens.SettingsScreen
 import com.levelup.app.ui.screens.TodayScreen
 import com.levelup.app.ui.theme.LevelUpTheme
+import com.levelup.app.ui.viewmodel.BlockerViewModel
 import com.levelup.app.ui.viewmodel.FocusViewModel
 import com.levelup.app.ui.viewmodel.OnboardingViewModel
 import com.levelup.app.ui.viewmodel.ProgressViewModel
@@ -71,13 +73,20 @@ private enum class Dest(val route: String, val label: String, val icon: ImageVec
 }
 
 private const val SETTINGS_ROUTE = "settings"
+private const val BLOCKER_ROUTE = "blocker"
 
 @Composable
 private inline fun <reified VM : ViewModel> rememberVm(crossinline create: () -> VM): VM =
     viewModel(factory = viewModelFactory { initializer { create() } })
 
 @Composable
-fun AppRoot(container: AppContainer, openTaskId: String?, onOpenTaskConsumed: () -> Unit) {
+fun AppRoot(
+    container: AppContainer,
+    openTaskId: String?,
+    onOpenTaskConsumed: () -> Unit,
+    openDest: String?,
+    onOpenDestConsumed: () -> Unit,
+) {
     val settings by container.settings.flow
         .map<UserSettings, UserSettings?> { it }
         .collectAsStateWithLifecycle(initialValue = null)
@@ -88,19 +97,37 @@ fun AppRoot(container: AppContainer, openTaskId: String?, onOpenTaskConsumed: ()
         when {
             s == null -> Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
             !s.onboardingDone -> OnboardingScreen(rememberVm { OnboardingViewModel(container.repository) })
-            else -> MainScaffold(container, openTaskId, onOpenTaskConsumed)
+            else -> MainScaffold(container, openTaskId, onOpenTaskConsumed, openDest, onOpenDestConsumed)
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MainScaffold(container: AppContainer, openTaskId: String?, onOpenTaskConsumed: () -> Unit) {
+private fun MainScaffold(
+    container: AppContainer,
+    openTaskId: String?,
+    onOpenTaskConsumed: () -> Unit,
+    openDest: String?,
+    onOpenDestConsumed: () -> Unit,
+) {
     val nav = rememberNavController()
     val backStack by nav.currentBackStackEntryAsState()
     val destination = backStack?.destination
-    val onSettings = destination?.route == SETTINGS_ROUTE
+    val onSettings = destination?.route == SETTINGS_ROUTE || destination?.route == BLOCKER_ROUTE
+    val subTitle = if (destination?.route == BLOCKER_ROUTE) "Distraction protection" else "Settings"
     var pendingAdd by remember { mutableStateOf(false) }
+
+    // Tapping a focus-interruption notification opens the Focus tab.
+    LaunchedEffect(openDest) {
+        if (openDest == "focus") {
+            nav.navigate(Dest.FOCUS.route) {
+                popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+                launchSingleTop = true
+            }
+        }
+        if (openDest != null) onOpenDestConsumed()
+    }
 
     // Tapping a reminder opens Today with that task highlighted for a few seconds.
     LaunchedEffect(openTaskId) {
@@ -123,7 +150,7 @@ private fun MainScaffold(container: AppContainer, openTaskId: String?, onOpenTas
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (onSettings) "Settings" else Dest.entries.firstOrNull { it.route == destination?.route }?.label ?: "Level Up") },
+                title = { Text(if (onSettings) subTitle else Dest.entries.firstOrNull { it.route == destination?.route }?.label ?: "Level Up") },
                 navigationIcon = {
                     if (onSettings) IconButton(onClick = { nav.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -162,10 +189,15 @@ private fun MainScaffold(container: AppContainer, openTaskId: String?, onOpenTas
             composable(Dest.ROUTINE.route) {
                 RoutineScreen(rememberVm { RoutineViewModel(container.repository) }, pendingAdd) { pendingAdd = false }
             }
-            composable(Dest.FOCUS.route) { FocusScreen(rememberVm { FocusViewModel(container.repository) }) }
+            composable(Dest.FOCUS.route) {
+                FocusScreen(rememberVm { FocusViewModel(container.repository) }, onOpenBlocker = { nav.navigate(BLOCKER_ROUTE) { launchSingleTop = true } })
+            }
             composable(Dest.PROGRESS.route) { ProgressScreen(rememberVm { ProgressViewModel(container.repository) }) }
             composable(Dest.REWARDS.route) { RewardsScreen(rememberVm { RewardsViewModel(container.repository) }) }
-            composable(SETTINGS_ROUTE) { SettingsScreen(rememberVm { SettingsViewModel(container) }) }
+            composable(SETTINGS_ROUTE) {
+                SettingsScreen(rememberVm { SettingsViewModel(container) }, onOpenBlocker = { nav.navigate(BLOCKER_ROUTE) { launchSingleTop = true } })
+            }
+            composable(BLOCKER_ROUTE) { BlockerScreen(rememberVm { BlockerViewModel(container) }) }
         }
     }
 }
