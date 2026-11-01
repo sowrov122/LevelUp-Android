@@ -55,6 +55,24 @@ import com.levelup.app.ui.viewmodel.RoutineItemUi
 import com.levelup.app.ui.viewmodel.RoutineViewModel
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Checkbox
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import com.levelup.app.ui.components.ProgressBar
+import com.levelup.app.ui.viewmodel.RoutineDayUi
+import com.levelup.app.ui.viewmodel.TaskRowUi
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
+import java.util.Locale
 
 private val DAY_NAMES = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 
@@ -74,6 +92,8 @@ private fun RoutineTaskEntity.toDraft() = TaskDraft(
 @Composable
 fun RoutineScreen(vm: RoutineViewModel, pendingAdd: Boolean, onAddConsumed: () -> Unit) {
     val state by vm.state.collectAsStateWithLifecycle()
+    val day by vm.day.collectAsStateWithLifecycle()
+    var manage by rememberSaveable { mutableStateOf(false) }
     var editing by remember { mutableStateOf<TaskDraft?>(null) }
     var deleting by remember { mutableStateOf<RoutineTaskEntity?>(null) }
 
@@ -85,24 +105,34 @@ fun RoutineScreen(vm: RoutineViewModel, pendingAdd: Boolean, onAddConsumed: () -
     }
 
     Box(Modifier.fillMaxWidth()) {
-        LazyColumn(
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 96.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            if (state.anyReminderConfigured) item { NotificationPermissionCard() }
-            if (!state.loading && state.items.isEmpty()) {
-                item { EmptyState("No tasks yet", "Tap + to add your first routine task.") }
+        Column(Modifier.fillMaxWidth()) {
+            Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(selected = !manage, onClick = { manage = false }, label = { Text("Daily view") })
+                FilterChip(selected = manage, onClick = { manage = true }, label = { Text("Manage tasks") })
             }
-            items(state.items, key = { it.task.id }) { item ->
-                RoutineRow(
-                    item,
-                    onEdit = { editing = item.task.toDraft() },
-                    onDelete = { deleting = item.task },
-                    onToggle = { vm.setEnabled(item.task.id, it) },
-                    onUp = { vm.move(item.task.id, -1) },
-                    onDown = { vm.move(item.task.id, 1) },
-                    onDuplicate = { vm.duplicate(item.task.id) },
-                )
+            if (!manage) {
+                DayView(day, onSelect = vm::selectDate, onToggle = vm::setCompleted)
+            } else {
+                LazyColumn(
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    if (state.anyReminderConfigured) item { NotificationPermissionCard() }
+                    if (!state.loading && state.items.isEmpty()) {
+                        item { EmptyState("No tasks yet", "Tap + to add your first routine task.") }
+                    }
+                    items(state.items, key = { it.task.id }) { item ->
+                        RoutineRow(
+                            item,
+                            onEdit = { editing = item.task.toDraft() },
+                            onDelete = { deleting = item.task },
+                            onToggle = { vm.setEnabled(item.task.id, it) },
+                            onUp = { vm.move(item.task.id, -1) },
+                            onDown = { vm.move(item.task.id, 1) },
+                            onDuplicate = { vm.duplicate(item.task.id) },
+                        )
+                    }
+                }
             }
         }
         FloatingActionButton(
@@ -129,6 +159,115 @@ fun RoutineScreen(vm: RoutineViewModel, pendingAdd: Boolean, onAddConsumed: () -
             onConfirm = { vm.delete(task.id); deleting = null },
             onDismiss = { deleting = null },
         )
+    }
+}
+
+private val DAY_HEADER = DateTimeFormatter.ofPattern("EEEE, d MMMM")
+
+@Composable
+private fun DayView(day: RoutineDayUi, onSelect: (LocalDate) -> Unit, onToggle: (String, Boolean) -> Unit) {
+    val selected = day.selected
+    LazyColumn(
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 96.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        item {
+            Text(
+                if (selected != null && selected == day.today) "Today's Routine" else selected?.format(DAY_HEADER) ?: "",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                day.weekDays.forEach { d ->
+                    val isSel = d == selected
+                    val isToday = d == day.today
+                    Column(
+                        Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (isSel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
+                            .then(
+                                if (isToday && !isSel) Modifier.border(1.5.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp))
+                                else Modifier,
+                            )
+                            .clickable { onSelect(d) }
+                            .padding(vertical = 8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        val fg = if (isSel) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+                        Text(d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()), style = MaterialTheme.typography.labelSmall, color = fg)
+                        Text(d.dayOfMonth.toString(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = fg)
+                    }
+                }
+            }
+        }
+        item {
+            val pct = if (day.total == 0) 0 else day.completed * 100 / day.total
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("${day.completed}/${day.total} Completed", color = MaterialTheme.colorScheme.tertiary, fontWeight = FontWeight.SemiBold)
+                    Text("$pct%", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                }
+                ProgressBar(if (day.total == 0) 0f else day.completed.toFloat() / day.total, height = 8.dp)
+                if (!day.canToggle && selected != null) {
+                    Text(
+                        if (day.today != null && selected.isBefore(day.today)) "Past days are read-only history."
+                        else "Upcoming day: you can tick tasks once the day arrives.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+        if (!day.loading && day.rows.isEmpty()) {
+            item {
+                EmptyState(
+                    if (day.selected != null && day.today != null && day.selected.isBefore(day.today)) "Nothing was recorded for this day"
+                    else "Nothing scheduled",
+                    "Past days only show what the app tracked. Use Manage tasks to edit your routine.",
+                )
+            }
+        }
+        items(day.rows, key = { it.instanceId }) { row -> DayRow(row, day.canToggle, onToggle) }
+    }
+}
+
+@Composable
+private fun DayRow(row: TaskRowUi, canToggle: Boolean, onToggle: (String, Boolean) -> Unit) {
+    val (start, end) = row.timeLabel.split("–").let { it.first() to it.last() }
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(Modifier.width(48.dp), horizontalAlignment = Alignment.End) {
+            Text(start, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+            Text(end, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Card(
+            Modifier.weight(1f),
+            border = if (row.inProgress) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
+        ) {
+            Row(Modifier.padding(start = 0.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.width(5.dp).height(56.dp).background(Color(row.category.colorHex)))
+                Column(Modifier.weight(1f).padding(horizontal = 12.dp, vertical = 10.dp)) {
+                    Text(row.title, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        when {
+                            row.status == TaskStatus.COMPLETED -> "Done · +${row.pointsAwarded} XP"
+                            row.inProgress -> "In progress · +${row.xpReward} XP"
+                            row.status == TaskStatus.MISSED -> "Missed"
+                            else -> "+${row.xpReward} XP · ${formatMinutes(row.durationMinutes)}"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (row.status == TaskStatus.MISSED) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Checkbox(
+                    checked = row.status == TaskStatus.COMPLETED,
+                    onCheckedChange = { onToggle(row.instanceId, it) },
+                    enabled = canToggle,
+                )
+            }
+        }
     }
 }
 

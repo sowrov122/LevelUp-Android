@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -121,6 +122,49 @@ fun ObservatoryScene(
                 close()
             }
             drawPath(hull, accent)
+        }
+
+        // ---- shop items (drawn only when owned) ----
+        if ("obs_moon" in owned) {
+            drawCircle(Color(0xFFBDBDBD), radius = h * 0.05f, center = Offset(w * 0.62f, h * 0.1f))
+            drawCircle(Color(0xFF9E9E9E), radius = h * 0.012f, center = Offset(w * 0.61f, h * 0.09f))
+        }
+        if ("obs_new_planet" in owned) {
+            val c = Offset(w * 0.28f, h * 0.3f)
+            val r = h * 0.09f
+            drawCircle(Brush.radialGradient(listOf(Color(0xFFFFB86B), Color(0xFFB5502B)), center = c, radius = r), radius = r, center = c)
+        }
+        if ("obs_shuttle" in owned) {
+            drawRoundRect(Color(0xFFEDEDED), Offset(w * 0.18f, h * 0.14f), Size(w * 0.1f, h * 0.035f), CornerRadius(8f))
+            drawRect(Color(0xFFD9534F), Offset(w * 0.18f, h * 0.125f), Size(w * 0.02f, h * 0.015f))
+            drawCircle(Color(0xFF7FB6E8), radius = 2.dp.toPx(), center = Offset(w * 0.26f, h * 0.157f))
+        }
+        if ("obs_starship" in owned) {
+            val ship = Path().apply {
+                moveTo(w * 0.08f, h * 0.2f)
+                lineTo(w * 0.3f, h * 0.12f)
+                lineTo(w * 0.36f, h * 0.2f)
+                lineTo(w * 0.3f, h * 0.28f)
+                close()
+            }
+            drawPath(ship, Color(0xFFCFC6BB))
+            drawCircle(accent, radius = 3.dp.toPx(), center = Offset(w * 0.28f, h * 0.2f))
+            drawLine(accent.copy(alpha = 0.6f), Offset(w * 0.08f, h * 0.2f), Offset(w * 0.02f, h * 0.2f), strokeWidth = 3.dp.toPx(), cap = StrokeCap.Round)
+        }
+        if ("obs_solar" in owned) {
+            listOf(0.58f, 0.67f).forEach { x ->
+                drawRect(Color(0xFF3D6FB6), Offset(w * x, h * 0.72f), Size(w * 0.08f, h * 0.09f))
+                drawLine(Color(0x88FFFFFF), Offset(w * (x + 0.04f), h * 0.72f), Offset(w * (x + 0.04f), h * 0.81f), strokeWidth = 1.dp.toPx())
+            }
+        }
+        if ("obs_garden" in owned) {
+            drawArc(Color(0xAA4CAF50), 180f, 180f, true, Offset(w * 0.78f, h * 0.7f), Size(w * 0.16f, h * 0.24f))
+            drawCircle(Color(0xFFE8F5E9), radius = 2.dp.toPx(), center = Offset(w * 0.86f, h * 0.77f))
+        }
+        if ("obs_antenna" in owned) {
+            drawLine(Color(0xFFCFC6BB), Offset(w * 0.06f, h * 0.82f), Offset(w * 0.06f, h * 0.52f), strokeWidth = 3.dp.toPx(), cap = StrokeCap.Round)
+            drawArc(Color(0xFFCFC6BB), 200f, 140f, false, Offset(w * 0.02f, h * 0.47f), Size(w * 0.08f, h * 0.08f), style = Stroke(2.dp.toPx()))
+            drawCircle(accent, radius = 2.dp.toPx(), center = Offset(w * 0.06f, h * 0.5f))
         }
 
         if ("dome" in unlocked) {

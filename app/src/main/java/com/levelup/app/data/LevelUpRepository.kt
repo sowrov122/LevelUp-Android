@@ -60,6 +60,7 @@ class LevelUpRepository(
     private val settings: SettingsStore,
     private val reminders: ReminderManager,
     private val essentialPackages: () -> Set<String> = { emptySet() },
+    private val allowTestGrants: Boolean = false,
     private val nowMillis: () -> Long = { System.currentTimeMillis() },
     private val elapsedRealtime: () -> Long = { SystemClock.elapsedRealtime() },
 ) {
@@ -524,6 +525,28 @@ class LevelUpRepository(
             )
             PurchaseResult.Success
         }
+    }
+
+    /** Debug builds only: lets testers try the shop. Recorded in the ledger like everything else. */
+    suspend fun grantTestCoins(amount: Int): Boolean {
+        if (!allowTestGrants) return false
+        val now = nowMillis()
+        val zone = zone()
+        scoreDao.insert(
+            ScoreEventEntity(
+                id = UUID.randomUUID().toString(),
+                eventType = ScoreEventType.TEST_GRANT,
+                referenceId = "test:$now",
+                localDate = LocalDate.ofInstant(Instant.ofEpochMilli(now), zone).toString(),
+                pointsDelta = 0,
+                xpDelta = 0,
+                coinsDelta = amount.coerceIn(1, 100_000),
+                occurredAt = now,
+                idempotencyKey = "testgrant:$now",
+                note = "Test coins (debug build only)",
+            ),
+        )
+        return true
     }
 
     suspend fun equipTheme(themeId: String) {

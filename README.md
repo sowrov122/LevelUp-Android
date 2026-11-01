@@ -59,3 +59,8 @@ Level: XP to advance from level L = 100 + 25·L. Daily points are floored at 0; 
 - Logging audit: the app contains no `Log`/`println` calls, so no personal data is written to logcat.
 - Not covered by automated tests: full-screen Compose flows (onboarding, create/edit task, permission re-enable), the guard service,
   notification delivery and reboot recovery.
+
+## Test coins (debug builds only)
+Debug builds show a "Testing only / +10,000" card at the top of the Rewards tab. Each tap adds 10,000 coins through the normal
+ledger (type `TEST_GRANT`, note "Test coins (debug build only)"), so it is visible in the ledger and the JSON export. The button and
+the repository method are disabled in release builds (`BuildConfig.DEBUG`).

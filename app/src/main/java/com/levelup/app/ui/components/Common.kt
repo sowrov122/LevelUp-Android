@@ -22,6 +22,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -103,7 +105,12 @@ fun ProgressRing(
         Canvas(Modifier.fillMaxSize().padding(8.dp)) {
             val stroke = Stroke(width = 12.dp.toPx(), cap = StrokeCap.Round)
             drawArc(track, 0f, 360f, false, style = stroke)
-            if (fraction > 0f) drawArc(color, -90f, 360f * fraction.coerceIn(0f, 1f), false, style = stroke)
+            if (fraction > 0f) {
+                drawArc(
+                    Brush.linearGradient(listOf(Color(0xFFFFCE00), color), start = Offset(0f, 0f), end = Offset(size.width, size.height)),
+                    -90f, 360f * fraction.coerceIn(0f, 1f), false, style = stroke,
+                )
+            }
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(centerText, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)

@@ -18,7 +18,7 @@ enum class TaskStatus { PENDING, COMPLETED, SKIPPED, MISSED }
 enum class FocusStatus { RUNNING, PAUSED, COMPLETED, CANCELLED }
 
 enum class ScoreEventType {
-    TASK_COMPLETED, TASK_REVERSED, FOCUS_COMPLETED, DAILY_BONUS, ACHIEVEMENT, REWARD_PURCHASE, DISTRACTION_PENALTY
+    TASK_COMPLETED, TASK_REVERSED, FOCUS_COMPLETED, DAILY_BONUS, ACHIEVEMENT, REWARD_PURCHASE, DISTRACTION_PENALTY, TEST_GRANT
 }
 
 enum class InterruptionAction { PENALIZED, LOGGED_ONLY, OVERRIDE }
@@ -75,3 +75,13 @@ data class TaskDraft(
     val isEnabled: Boolean = true,
     val repeatDaysMask: Int = TimeUtils.ALL_DAYS,
 )
+
+/** Rank names shown next to the level number. Display only; they never affect scoring. */
+object LevelTitles {
+    private val TITLES = listOf(
+        1 to "Cadet", 3 to "Navigator", 5 to "Focus Builder", 8 to "Station Engineer",
+        12 to "Discipline Builder", 18 to "Commander", 25 to "Star Captain", 35 to "Galaxy Architect",
+    )
+
+    fun titleFor(level: Int): String = TITLES.lastOrNull { level >= it.first }?.second ?: "Cadet"
+}

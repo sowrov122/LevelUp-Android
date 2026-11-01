@@ -29,7 +29,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true   // BuildConfig.DEBUG gates the test-coin button
+    }
     lint {
         abortOnError = false
         checkReleaseBuilds = false

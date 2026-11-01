@@ -25,6 +25,7 @@ class AppContainer(context: Context) {
     val repository = LevelUpRepository(
         database, settings, reminders,
         essentialPackages = { EssentialApps.all(appContext) },
+        allowTestGrants = BuildConfig.DEBUG,
     )
     val notifier = GuardNotifier(appContext)
     val entitlements: EntitlementProvider = NoBillingEntitlementProvider()

@@ -2,6 +2,7 @@ package com.levelup.app.ui.screens
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.levelup.app.domain.LevelTitles
 import com.levelup.app.domain.TaskStatus
 import com.levelup.app.ui.components.EmptyState
 import com.levelup.app.ui.components.ProgressBar
@@ -75,32 +77,37 @@ fun TodayScreen(
             val greeting = when { hour < 12 -> "Good morning"; hour < 17 -> "Good afternoon"; else -> "Good evening" }
             Column {
                 Text(
-                    if (state.name.isBlank()) greeting else "$greeting, ${state.name}",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
+                    if (state.name.isBlank()) greeting else "$greeting,",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (state.name.isNotBlank()) {
+                    Text(state.name, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                }
                 if (date != null) {
                     Text(
-                        date.format(DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy")),
+                        date.format(DateTimeFormatter.ofPattern("EEE, d MMM yyyy")),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
         }
 
+        // Level card
         item {
-            Card(Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    ProgressRing(
-                        fraction = if (state.total == 0) 0f else state.completed.toFloat() / state.total,
-                        centerText = "${state.completed}/${state.total}",
-                        subText = "tasks",
-                    )
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("Level ${state.level.level}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        ProgressBar(state.level.fraction)
+            Card(Modifier.fillMaxWidth(), border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))) {
+                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Box(
+                        Modifier.size(56.dp).clip(CircleShape).border(2.dp, MaterialTheme.colorScheme.secondary, CircleShape),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text("${state.level.level}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
+                    }
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Lv. ${state.level.level}  ${LevelTitles.titleFor(state.level.level)}", fontWeight = FontWeight.Bold)
+                        ProgressBar(state.level.fraction, color = MaterialTheme.colorScheme.primary, height = 10.dp)
                         Text(
-                            "${state.level.xpIntoLevel} / ${state.level.xpForNextLevel} XP to level ${state.level.level + 1}",
+                            "${state.level.xpIntoLevel} / ${state.level.xpForNextLevel} XP",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -109,11 +116,46 @@ fun TodayScreen(
             }
         }
 
+        // Progress ring + stat tiles
         item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StatCard("Points today", state.pointsToday.toString(), Modifier.weight(1f))
-                StatCard("Streak", "${state.streaks.current} d", Modifier.weight(1f), sub = "best ${state.streaks.longest}")
-                StatCard("Coins", state.coins.toString(), Modifier.weight(1f))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Card(Modifier.weight(1f)) {
+                    Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        val pct = if (state.total == 0) 0 else state.completed * 100 / state.total
+                        ProgressRing(
+                            fraction = if (state.total == 0) 0f else state.completed.toFloat() / state.total,
+                            centerText = "${state.completed}/${state.total}",
+                            subText = "Tasks done",
+                            modifier = Modifier.size(150.dp),
+                        )
+                        Text("$pct%", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                    }
+                }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    MiniStat("🔥", "${state.streaks.current}", "Day streak")
+                    MiniStat("⭐", "${state.pointsToday}", "Points today")
+                    MiniStat("🪙", "${state.coins}", "Coins")
+                }
+            }
+        }
+
+        // Motivation
+        item {
+            Card(Modifier.fillMaxWidth()) {
+                Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
+                    Text("❝", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
+                    Column {
+                        if (date != null) {
+                            Text(MESSAGES[date.toEpochDay().mod(MESSAGES.size.toLong()).toInt()], style = MaterialTheme.typography.bodyLarge)
+                        }
+                        Text(
+                            "Focus today: ${formatMinutes(state.focusMinutes)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
+                    }
+                }
             }
         }
 
@@ -138,21 +180,6 @@ fun TodayScreen(
                         Text("${next.timeLabel} · ${formatMinutes(next.durationMinutes)}", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-            }
-        }
-
-        item {
-            Text(
-                "Focus today: ${formatMinutes(state.focusMinutes)}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (date != null) {
-                Text(
-                    MESSAGES[date.toEpochDay().mod(MESSAGES.size.toLong()).toInt()],
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(top = 4.dp),
-                )
             }
         }
 
@@ -197,6 +224,19 @@ private fun TaskRow(row: TaskRowUi, highlighted: Boolean, onToggle: (Boolean) ->
                     row.status == TaskStatus.MISSED -> Text("Missed", style = MaterialTheme.typography.labelMedium, color = Danger)
                     else -> {}
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MiniStat(icon: String, value: String, label: String) {
+    Card(Modifier.fillMaxWidth()) {
+        Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(icon, style = MaterialTheme.typography.titleLarge)
+            Column {
+                Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

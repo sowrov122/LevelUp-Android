@@ -213,7 +213,9 @@ private fun MainScaffold(
             composable(SETTINGS_ROUTE) {
                 SettingsScreen(rememberVm { SettingsViewModel(container) }, onOpenBlocker = { nav.navigate(BLOCKER_ROUTE) { launchSingleTop = true } })
             }
-            composable(BLOCKER_ROUTE) { BlockerScreen(rememberVm { BlockerViewModel(container) }) }
+            composable(BLOCKER_ROUTE) {
+                BlockerScreen(rememberVm { BlockerViewModel(container) }, onStartFocus = { go(Dest.FOCUS.route) })
+            }
         }
     }
 }

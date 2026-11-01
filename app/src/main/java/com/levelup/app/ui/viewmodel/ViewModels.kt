@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.levelup.app.AppContainer
 import android.content.Intent
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.core.graphics.drawable.toBitmap
 import com.levelup.app.data.BlockedAppEntity
 import com.levelup.app.data.FocusSessionEntity
 import com.levelup.app.data.InterruptionEventEntity
@@ -70,6 +72,7 @@ data class TaskRowUi(
     val inProgress: Boolean,
     val priority: Priority,
     val pointsAwarded: Int,
+    val xpReward: Int = 0,
 )
 
 data class TodayUiState(
@@ -161,7 +164,60 @@ data class RoutineUiState(
     val anyReminderConfigured: Boolean = false,
 )
 
+data class RoutineDayUi(
+    val today: LocalDate? = null,
+    val selected: LocalDate? = null,
+    val weekDays: List<LocalDate> = emptyList(),
+    val rows: List<TaskRowUi> = emptyList(),
+    val completed: Int = 0,
+    val total: Int = 0,
+    /** Only today can be ticked: past days are history, future days are plans. */
+    val canToggle: Boolean = false,
+    val loading: Boolean = true,
+)
+
+@OptIn(ExperimentalCoroutinesApi::class)
 class RoutineViewModel(private val repo: LevelUpRepository) : ViewModel() {
+    private val selected = MutableStateFlow<LocalDate?>(null)
+
+    val day: StateFlow<RoutineDayUi> = combine(repo.observeDate(), selected) { today, sel -> today to (sel ?: today) }
+        .flatMapLatest { (today, sel) ->
+            flow {
+                // Never back-fill past days: that would invent "missed" history.
+                if (!sel.isBefore(today)) repo.ensureDay(sel)
+                emit(Unit)
+            }.flatMapLatest {
+                combine(repo.observeInstances(sel), ticker(30_000)) { instances, now ->
+                    val rows = instances.map { i ->
+                        val done = i.status == TaskStatus.COMPLETED
+                        TaskRowUi(
+                            instanceId = i.id, taskId = i.taskId, title = i.title, category = i.category,
+                            timeLabel = "${TimeUtils.format(i.startMinute)}–${TimeUtils.format(i.startMinute + i.durationMinutes)}",
+                            durationMinutes = i.durationMinutes,
+                            status = when {
+                                done -> TaskStatus.COMPLETED
+                                sel == today && now >= i.scheduledEnd -> TaskStatus.MISSED
+                                sel.isBefore(today) -> TaskStatus.MISSED
+                                else -> TaskStatus.PENDING
+                            },
+                            inProgress = sel == today && !done && now >= i.scheduledStart && now < i.scheduledEnd,
+                            priority = i.priority, pointsAwarded = i.pointsAwarded,
+                            xpReward = ScoringEngine.calculateTaskReward(i.durationMinutes).xp,
+                        )
+                    }
+                    val monday = sel.minusDays((sel.dayOfWeek.value - 1).toLong())
+                    RoutineDayUi(
+                        today = today, selected = sel, weekDays = (0L..6L).map { monday.plusDays(it) },
+                        rows = rows, completed = rows.count { it.status == TaskStatus.COMPLETED }, total = rows.size,
+                        canToggle = sel == today, loading = false,
+                    )
+                }
+            }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), RoutineDayUi())
+
+    fun selectDate(date: LocalDate) { selected.value = date }
+    fun setCompleted(instanceId: String, done: Boolean) { viewModelScope.launch { repo.setCompleted(instanceId, done) } }
+
     val state: StateFlow<RoutineUiState> = repo.observeTasks().map { tasks ->
         val slots = tasks.filter { it.isEnabled }.associate { it.id to TaskSlot(it.startMinute, it.durationMinutes, it.repeatDaysMask) }
         RoutineUiState(
@@ -365,6 +421,9 @@ class RewardsViewModel(private val repo: LevelUpRepository) : ViewModel() {
     }
 
     fun equip(themeId: String) { viewModelScope.launch { repo.equipTheme(themeId) } }
+    fun grantTestCoins() {
+        viewModelScope.launch { message.value = if (repo.grantTestCoins(10_000)) "Added 10,000 test coins." else "Test coins are only available in debug builds." }
+    }
     fun consumeToast() { message.value = null }
 }
 
@@ -427,7 +486,11 @@ class OnboardingViewModel(private val repo: LevelUpRepository) : ViewModel() {
 
 // ============================================ Distraction protection
 
-data class InstalledApp(val packageName: String, val label: String)
+data class InstalledApp(
+    val packageName: String,
+    val label: String,
+    val icon: androidx.compose.ui.graphics.ImageBitmap? = null,
+)
 
 data class BlockerUiState(
     val settings: UserSettings = UserSettings(),
@@ -479,7 +542,13 @@ class BlockerViewModel(private val container: AppContainer) : ViewModel() {
                 val launcher = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
                 @Suppress("DEPRECATION")
                 pm.queryIntentActivities(launcher, 0)
-                    .map { InstalledApp(it.activityInfo.packageName, it.loadLabel(pm).toString()) }
+                    .map {
+                        InstalledApp(
+                            it.activityInfo.packageName,
+                            it.loadLabel(pm).toString(),
+                            runCatching { it.loadIcon(pm).toBitmap(96, 96).asImageBitmap() }.getOrNull(),
+                        )
+                    }
                     .distinctBy { it.packageName }
                     .filter { it.packageName !in essentials }
                     .sortedBy { it.label.lowercase() }
