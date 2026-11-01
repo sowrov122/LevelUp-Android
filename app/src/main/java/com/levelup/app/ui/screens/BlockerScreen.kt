@@ -55,6 +55,8 @@ fun BlockerScreen(vm: BlockerViewModel) {
     var confirmPause by remember { mutableStateOf<Int?>(null) }
     var penaltyText by remember(s.settings.blockerPenaltyPoints) { mutableStateOf(s.settings.blockerPenaltyPoints.toString()) }
     var cooldownText by remember(s.settings.blockerCooldownSeconds) { mutableStateOf(s.settings.blockerCooldownSeconds.toString()) }
+    var coinsText by remember(s.settings.blockerPenaltyCoins) { mutableStateOf(s.settings.blockerPenaltyCoins.toString()) }
+    var xpText by remember(s.settings.blockerPenaltyXp) { mutableStateOf(s.settings.blockerPenaltyXp.toString()) }
 
     val owner = LocalLifecycleOwner.current
     DisposableEffect(owner) {
@@ -132,6 +134,25 @@ fun BlockerScreen(vm: BlockerViewModel) {
         item { NotificationPermissionCard() }
 
         item {
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Strict mode", Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
+                        Switch(checked = s.settings.blockerStrict, onCheckedChange = { vm.setStrict(it) })
+                    }
+                    Text(
+                        "On: opening ANY app other than Level Up, the home screen, phone, messages, maps, clock and system settings " +
+                            "during a focus session costs you. Off: only the apps you pick below count. " +
+                            "Android does not let one app lock other apps, so this is a penalty, not a wall. " +
+                            "For a harder lock use \"Lock phone to Level Up\" on the Focus screen.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+
+        item {
             SectionTitle("Rules")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
@@ -145,6 +166,24 @@ fun BlockerScreen(vm: BlockerViewModel) {
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f),
                 )
             }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+                OutlinedTextField(
+                    coinsText, { coinsText = it.filter(Char::isDigit).take(3) },
+                    label = { Text("Also −coins") }, singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f),
+                )
+                OutlinedTextField(
+                    xpText, { xpText = it.filter(Char::isDigit).take(3) },
+                    label = { Text("Also −XP") }, singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f),
+                )
+            }
+            Text(
+                "Coins and XP never go below zero. Deducting XP can lower your level, so it is off (0) by default.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
+            )
             Text(
                 "One launch costs at most one penalty, then the same app is only logged until the cooldown ends (30–3600 s). " +
                     "Daily points never drop below zero.",
@@ -152,7 +191,7 @@ fun BlockerScreen(vm: BlockerViewModel) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(vertical = 4.dp),
             )
-            Button(onClick = { vm.saveRules(penaltyText.toIntOrNull() ?: 0, cooldownText.toIntOrNull() ?: 300) }) { Text("Save rules") }
+            Button(onClick = { vm.saveRules(penaltyText.toIntOrNull() ?: 0, cooldownText.toIntOrNull() ?: 300, coinsText.toIntOrNull() ?: 0, xpText.toIntOrNull() ?: 0) }) { Text("Save rules") }
         }
 
         item {

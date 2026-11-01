@@ -36,7 +36,13 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.util.UUID
 
-data class InterruptionResult(val displayName: String, val decision: InterruptionDecision, val penalty: Int)
+data class InterruptionResult(
+    val displayName: String,
+    val decision: InterruptionDecision,
+    val penalty: Int,
+    val xpPenalty: Int = 0,
+    val coinPenalty: Int = 0,
+)
 
 sealed interface PurchaseResult {
     data object Success : PurchaseResult
@@ -554,9 +560,11 @@ class LevelUpRepository(
      * RUNNING focus session can ever produce an event; repeated events are deduplicated and a per-app
      * cooldown prevents repeated deductions for one launch.
      */
-    suspend fun handleForegroundEvent(packageName: String, eventTimeMs: Long): InterruptionResult? {
-        val app = blockedDao.get(packageName)?.takeIf { it.isEnabled } ?: return null
+    suspend fun handleForegroundEvent(packageName: String, eventTimeMs: Long, fallbackName: String = packageName): InterruptionResult? {
         val s = settings.current()
+        val app = blockedDao.get(packageName)?.takeIf { it.isEnabled }
+        if (app == null && !s.blockerStrict) return null
+        val displayName = app?.displayName ?: fallbackName
         val active = focusDao.getActive()
         val verdict = DistractionPolicy.calculate(
             eventTimeMs = eventTimeMs,
@@ -569,17 +577,20 @@ class LevelUpRepository(
             isSelectedApp = true,
             isEssential = packageName in essentialPackages(),
             pausedUntilMs = s.blockerPausedUntilMs,
+            otherPenaltyConfigured = s.blockerPenaltyCoins > 0 || s.blockerPenaltyXp > 0,
         )
         if (verdict.decision == InterruptionDecision.IGNORE || verdict.decision == InterruptionDecision.DUPLICATE) return null
 
         val date = LocalDate.ofInstant(Instant.ofEpochMilli(eventTimeMs), TimeUtils.zoneOf(s.timezoneId)).toString()
         val penalize = verdict.decision == InterruptionDecision.PENALIZE
+        var xpCut = 0
+        var coinCut = 0
         db.withTransaction {
             val inserted = interruptionDao.insert(
                 InterruptionEventEntity(
                     id = UUID.randomUUID().toString(),
                     packageName = packageName,
-                    displayName = app.displayName,
+                    displayName = displayName,
                     detectedAt = eventTimeMs,
                     focusSessionId = active?.id,
                     actionTaken = if (penalize) InterruptionAction.PENALIZED else InterruptionAction.LOGGED_ONLY,
@@ -588,6 +599,9 @@ class LevelUpRepository(
                 ),
             )
             if (inserted != -1L && penalize) {
+                // Never push XP or coins below zero, whatever the configured penalty is.
+                xpCut = minOf(s.blockerPenaltyXp, scoreDao.totalXp().coerceAtMost(Int.MAX_VALUE.toLong()).toInt()).coerceAtLeast(0)
+                coinCut = minOf(s.blockerPenaltyCoins, scoreDao.coins()).coerceAtLeast(0)
                 scoreDao.insert(
                     ScoreEventEntity(
                         id = UUID.randomUUID().toString(),
@@ -595,16 +609,16 @@ class LevelUpRepository(
                         referenceId = "intr:$packageName:$eventTimeMs",
                         localDate = date,
                         pointsDelta = -verdict.penaltyPoints,
-                        xpDelta = 0,
-                        coinsDelta = 0,
+                        xpDelta = -xpCut,
+                        coinsDelta = -coinCut,
                         occurredAt = eventTimeMs,
                         idempotencyKey = "penalty:$packageName:$eventTimeMs",
-                        note = "Opened ${app.displayName} during focus",
+                        note = "Opened $displayName during focus",
                     ),
                 )
             }
         }
-        return InterruptionResult(app.displayName, verdict.decision, verdict.penaltyPoints)
+        return InterruptionResult(displayName, verdict.decision, verdict.penaltyPoints, xpCut, coinCut)
     }
 
     /** User-initiated pause or emergency override. Always logged; never penalised. */

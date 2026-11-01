@@ -54,7 +54,10 @@ class FocusGuardService : Service() {
                     while (events.hasNextEvent()) {
                         events.getNextEvent(e)
                         if (e.eventType == FOREGROUND_EVENT && e.packageName != packageName && e.timeStamp >= since - OVERLAP_MS) {
-                            container.repository.handleForegroundEvent(e.packageName, e.timeStamp)
+                            val label = runCatching {
+                                packageManager.getApplicationLabel(packageManager.getApplicationInfo(e.packageName, 0)).toString()
+                            }.getOrDefault(e.packageName)
+                            container.repository.handleForegroundEvent(e.packageName, e.timeStamp, label)
                                 ?.let { container.notifier.showInterruption(it) }
                         }
                     }

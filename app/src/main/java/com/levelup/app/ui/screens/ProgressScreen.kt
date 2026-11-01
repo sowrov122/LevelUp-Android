@@ -78,7 +78,7 @@ fun ProgressScreen(vm: ProgressViewModel) {
                                     .aspectRatio(1f)
                                     .clip(RoundedCornerShape(6.dp))
                                     .background(
-                                        if (p == null) MaterialTheme.colorScheme.surfaceVariant
+                                        if (p == null) MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
                                         else MaterialTheme.colorScheme.primary.copy(alpha = 0.2f + 0.8f * p / 100f),
                                     ),
                             )

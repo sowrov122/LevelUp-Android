@@ -20,6 +20,7 @@ object DistractionPolicy {
         isSelectedApp: Boolean,
         isEssential: Boolean,
         pausedUntilMs: Long,
+        otherPenaltyConfigured: Boolean = false,
     ): PenaltyDecision {
         if (!protectionEnabled || !focusRunning || !isSelectedApp || isEssential) return PenaltyDecision(InterruptionDecision.IGNORE)
         // The same foreground event can be returned by overlapping polling windows.
@@ -28,6 +29,6 @@ object DistractionPolicy {
         val cooldownMs = cooldownSeconds.coerceAtLeast(0) * 1000L
         if (lastPenaltyMs != null && eventTimeMs - lastPenaltyMs < cooldownMs) return PenaltyDecision(InterruptionDecision.LOG_ONLY)
         val points = penaltyPoints.coerceAtLeast(0)
-        return if (points == 0) PenaltyDecision(InterruptionDecision.LOG_ONLY) else PenaltyDecision(InterruptionDecision.PENALIZE, points)
+        return if (points == 0 && !otherPenaltyConfigured) PenaltyDecision(InterruptionDecision.LOG_ONLY) else PenaltyDecision(InterruptionDecision.PENALIZE, points)
     }
 }

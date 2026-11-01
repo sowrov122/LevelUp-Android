@@ -7,6 +7,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -38,6 +39,7 @@ fun ObservatoryScene(
     owned: Set<String>,
     reducedMotion: Boolean,
     modifier: Modifier = Modifier,
+    circular: Boolean = false,
 ) {
     val unlocked = remember(sessions, minutes) { Observatory.unlockedIds(sessions, minutes) }
     val starCount = Observatory.starCount(sessions, minutes)
@@ -60,9 +62,10 @@ fun ObservatoryScene(
 
     Canvas(
         modifier
-            .fillMaxWidth()
-            .height(220.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .then(
+                if (circular) Modifier.fillMaxSize()
+                else Modifier.fillMaxWidth().height(220.dp).clip(RoundedCornerShape(16.dp)),
+            )
             .semantics {
                 contentDescription = "Your observatory: $starCount stars and ${unlocked.size} of " +
                     "${Observatory.milestones.size} modules unlocked"

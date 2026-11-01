@@ -1,6 +1,7 @@
 package com.levelup.app.service
 
 import android.content.Context
+import android.content.Intent
 import android.provider.Telephony
 import android.telecom.TelecomManager
 
@@ -16,6 +17,12 @@ object EssentialApps {
     fun all(context: Context): Set<String> {
         val dialer = runCatching { context.getSystemService(TelecomManager::class.java)?.defaultDialerPackage }.getOrNull()
         val sms = runCatching { Telephony.Sms.getDefaultSmsPackage(context) }.getOrNull()
-        return KNOWN + setOfNotNull(dialer, sms, context.packageName)
+        val homes = runCatching {
+            @Suppress("DEPRECATION")
+            context.packageManager
+                .queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME), 0)
+                .map { it.activityInfo.packageName }
+        }.getOrDefault(emptyList())
+        return KNOWN + homes + setOfNotNull(dialer, sms, context.packageName)
     }
 }

@@ -47,7 +47,12 @@ class GuardNotifier(private val context: Context) {
         if (!nm.areNotificationsEnabled()) return
         createChannels()
         val text = if (r.decision == InterruptionDecision.PENALIZE) {
-            "−${r.penalty} points today. Head back to your focus session."
+            val parts = buildList {
+                if (r.penalty > 0) add("−${r.penalty} points")
+                if (r.xpPenalty > 0) add("−${r.xpPenalty} XP")
+                if (r.coinPenalty > 0) add("−${r.coinPenalty} coins")
+            }.joinToString(", ")
+            "$parts. Head back to your focus session."
         } else {
             "Logged with no extra penalty (cooldown). Head back to your focus session."
         }

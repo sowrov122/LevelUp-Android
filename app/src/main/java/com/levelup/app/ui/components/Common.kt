@@ -94,7 +94,7 @@ fun ProgressRing(
     subText: String,
     modifier: Modifier = Modifier.size(120.dp),
 ) {
-    val track = MaterialTheme.colorScheme.surfaceVariant
+    val track = MaterialTheme.colorScheme.outline
     val color = MaterialTheme.colorScheme.primary
     Box(
         modifier.semantics { contentDescription = "Progress $centerText $subText" },
@@ -114,7 +114,7 @@ fun ProgressRing(
 
 @Composable
 fun ProgressBar(fraction: Float, modifier: Modifier = Modifier, color: Color = MaterialTheme.colorScheme.primary, height: Dp = 8.dp) {
-    Box(modifier.fillMaxWidth().height(height).clip(RoundedCornerShape(50)).background(MaterialTheme.colorScheme.surfaceVariant)) {
+    Box(modifier.fillMaxWidth().height(height).clip(RoundedCornerShape(50)).background(MaterialTheme.colorScheme.outline)) {
         Box(
             Modifier
                 .fillMaxHeight()
@@ -150,7 +150,7 @@ fun BarChart(
                         .fillMaxWidth(0.7f)
                         .height(h.dp)
                         .clip(RoundedCornerShape(4.dp))
-                        .background(if (value <= 0) MaterialTheme.colorScheme.surfaceVariant else barColor),
+                        .background(if (value <= 0) MaterialTheme.colorScheme.outline else barColor),
                 )
                 Text(label, style = MaterialTheme.typography.labelSmall, maxLines = 1)
             }

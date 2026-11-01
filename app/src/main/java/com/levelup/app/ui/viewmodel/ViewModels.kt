@@ -204,6 +204,8 @@ data class FocusUiState(
     val minutes: Int = 0,
     val owned: Set<String> = emptySet(),
     val reducedMotion: Boolean = false,
+    val protectionOn: Boolean = false,
+    val strictMode: Boolean = false,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -227,7 +229,10 @@ class FocusViewModel(private val repo: LevelUpRepository) : ViewModel() {
     val state: StateFlow<FocusUiState> = combine(
         activeUi, repo.observeFocusStats(), repo.observeOwnedIds(), repo.settingsFlow, lastOutcome,
     ) { active, stats, owned, settings, outcome ->
-        FocusUiState(active, outcome, stats.first, stats.second, owned, settings.reducedMotion)
+        FocusUiState(
+            active, outcome, stats.first, stats.second, owned, settings.reducedMotion,
+            protectionOn = settings.blockerEnabled, strictMode = settings.blockerEnabled && settings.blockerStrict,
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FocusUiState())
 
     init {
@@ -492,10 +497,17 @@ class BlockerViewModel(private val container: AppContainer) : ViewModel() {
 
     fun removeApp(packageName: String) { viewModelScope.launch { repo.setAppSelected(packageName, "", false) } }
 
-    fun saveRules(penalty: Int, cooldownSeconds: Int) {
+    fun setStrict(on: Boolean) { viewModelScope.launch { repo.updateSettingsQuiet { it.copy(blockerStrict = on) } } }
+
+    fun saveRules(penalty: Int, cooldownSeconds: Int, coins: Int, xp: Int) {
         viewModelScope.launch {
             repo.updateSettingsQuiet {
-                it.copy(blockerPenaltyPoints = penalty.coerceIn(0, 50), blockerCooldownSeconds = cooldownSeconds.coerceIn(30, 3600))
+                it.copy(
+                    blockerPenaltyPoints = penalty.coerceIn(0, 50),
+                    blockerCooldownSeconds = cooldownSeconds.coerceIn(30, 3600),
+                    blockerPenaltyCoins = coins.coerceIn(0, 100),
+                    blockerPenaltyXp = xp.coerceIn(0, 100),
+                )
             }
         }
     }

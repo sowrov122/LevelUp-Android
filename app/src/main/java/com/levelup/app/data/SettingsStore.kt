@@ -33,6 +33,10 @@ data class UserSettings(
     val blockerCooldownSeconds: Int = 300,
     /** Epoch millis until which protection is paused (user pause / emergency override). */
     val blockerPausedUntilMs: Long = 0L,
+    /** Strict mode: ANY non-essential app counts as leaving focus, not only the selected list. */
+    val blockerStrict: Boolean = false,
+    val blockerPenaltyCoins: Int = 0,
+    val blockerPenaltyXp: Int = 0,
 )
 
 class SettingsStore(private val context: Context) {
@@ -52,6 +56,9 @@ class SettingsStore(private val context: Context) {
         val BLOCK_PENALTY = intPreferencesKey("blocker_penalty")
         val BLOCK_COOLDOWN = intPreferencesKey("blocker_cooldown")
         val BLOCK_PAUSED = longPreferencesKey("blocker_paused_until")
+        val BLOCK_STRICT = booleanPreferencesKey("blocker_strict")
+        val BLOCK_COINS = intPreferencesKey("blocker_penalty_coins")
+        val BLOCK_XP = intPreferencesKey("blocker_penalty_xp")
     }
 
     val flow: Flow<UserSettings> = context.settingsDataStore.data.map { it.toSettings() }
@@ -76,6 +83,9 @@ class SettingsStore(private val context: Context) {
             p[K.BLOCK_PENALTY] = n.blockerPenaltyPoints
             p[K.BLOCK_COOLDOWN] = n.blockerCooldownSeconds
             p[K.BLOCK_PAUSED] = n.blockerPausedUntilMs
+            p[K.BLOCK_STRICT] = n.blockerStrict
+            p[K.BLOCK_COINS] = n.blockerPenaltyCoins
+            p[K.BLOCK_XP] = n.blockerPenaltyXp
         }
     }
 
@@ -101,6 +111,9 @@ class SettingsStore(private val context: Context) {
             blockerPenaltyPoints = this[K.BLOCK_PENALTY] ?: d.blockerPenaltyPoints,
             blockerCooldownSeconds = this[K.BLOCK_COOLDOWN] ?: d.blockerCooldownSeconds,
             blockerPausedUntilMs = this[K.BLOCK_PAUSED] ?: d.blockerPausedUntilMs,
+            blockerStrict = this[K.BLOCK_STRICT] ?: d.blockerStrict,
+            blockerPenaltyCoins = this[K.BLOCK_COINS] ?: d.blockerPenaltyCoins,
+            blockerPenaltyXp = this[K.BLOCK_XP] ?: d.blockerPenaltyXp,
         )
     }
 }

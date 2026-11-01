@@ -124,6 +124,8 @@ private fun MainScaffold(
         else -> "Settings"
     }
     var pendingAdd by remember { mutableStateOf(false) }
+    var immersive by remember { mutableStateOf(false) }
+    val hideBars = immersive && destination?.route == Dest.FOCUS.route
 
     // Tapping a focus-interruption notification opens the Focus tab.
     LaunchedEffect(openDest) {
@@ -156,7 +158,7 @@ private fun MainScaffold(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            if (!hideBars) TopAppBar(
                 title = { Text(if (onSettings) subTitle else Dest.entries.firstOrNull { it.route == destination?.route }?.label ?: "Level Up") },
                 navigationIcon = {
                     if (onSettings) IconButton(onClick = { nav.popBackStack() }) {
@@ -171,7 +173,7 @@ private fun MainScaffold(
             )
         },
         bottomBar = {
-            if (!onSettings) NavigationBar {
+            if (!onSettings && !hideBars) NavigationBar {
                 Dest.entries.forEach { d ->
                     NavigationBarItem(
                         selected = destination?.hierarchy?.any { it.route == d.route } == true,
@@ -197,7 +199,11 @@ private fun MainScaffold(
                 RoutineScreen(rememberVm { RoutineViewModel(container.repository) }, pendingAdd) { pendingAdd = false }
             }
             composable(Dest.FOCUS.route) {
-                FocusScreen(rememberVm { FocusViewModel(container.repository) }, onOpenBlocker = { nav.navigate(BLOCKER_ROUTE) { launchSingleTop = true } })
+                FocusScreen(
+                    rememberVm { FocusViewModel(container.repository) },
+                    onOpenBlocker = { nav.navigate(BLOCKER_ROUTE) { launchSingleTop = true } },
+                    onImmersive = { immersive = it },
+                )
             }
             composable(Dest.PROGRESS.route) { ProgressScreen(rememberVm { ProgressViewModel(container.repository) }) }
             composable(Dest.REWARDS.route) {
