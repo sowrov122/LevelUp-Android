@@ -92,3 +92,32 @@ class TimeUtilsTest {
         assertEquals("Choose at least one day.", TimeUtils.validate(TaskDraft(title = "x", repeatDaysMask = 0)))
     }
 }
+
+class TimeUtilsDstTest {
+    private val newYork = ZoneId.of("America/New_York")
+
+    @Test fun springForwardGapIsResolvedForwards() {
+        // 02:30 does not exist on 2026-03-08 in New York; java.time moves it to 03:30 EDT (07:30Z).
+        assertEquals(
+            Instant.parse("2026-03-08T07:30:00Z"),
+            TimeUtils.toInstant(LocalDate.of(2026, 3, 8), 2 * 60 + 30, newYork),
+        )
+    }
+
+    @Test fun fallBackOverlapUsesEarlierOffset() {
+        // 01:30 happens twice on 2026-11-01; the first occurrence is EDT (05:30Z).
+        assertEquals(
+            Instant.parse("2026-11-01T05:30:00Z"),
+            TimeUtils.toInstant(LocalDate.of(2026, 11, 1), 90, newYork),
+        )
+    }
+
+    @Test fun midnightBoundaryBelongsToTheNextLocalDate() {
+        val dhaka = ZoneId.of("Asia/Dhaka")
+        val justBefore = Instant.parse("2026-03-02T17:59:59Z") // 23:59:59 on 2 March in Dhaka
+        val atMidnight = Instant.parse("2026-03-02T18:00:00Z") // 00:00 on 3 March
+        assertEquals(LocalDate.of(2026, 3, 2), LocalDate.ofInstant(justBefore, dhaka))
+        assertEquals(LocalDate.of(2026, 3, 3), LocalDate.ofInstant(atMidnight, dhaka))
+        assertEquals(atMidnight, TimeUtils.toInstant(LocalDate.of(2026, 3, 2), 24 * 60, dhaka))
+    }
+}

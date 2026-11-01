@@ -39,6 +39,14 @@ jobs:
       - name: Build debug APK
         run: gradle assembleDebug --stacktrace
 
+      # Compiles the instrumented tests too (they need an emulator to run, so CI only checks they build).
+      - name: Compile instrumented tests
+        run: gradle assembleDebugAndroidTest --stacktrace
+
+      - name: Lint (report only)
+        continue-on-error: true
+        run: gradle lintDebug
+
       - name: Summarize results
         if: always()
         run: python3 .github/scripts/summarize.py
@@ -59,4 +67,5 @@ jobs:
           path: |
             app/build/test-results/
             app/build/reports/tests/
+            app/build/reports/lint-results-debug.html
           if-no-files-found: ignore

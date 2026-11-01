@@ -32,7 +32,7 @@ import com.levelup.app.ui.components.SectionTitle
 import com.levelup.app.ui.viewmodel.RewardsViewModel
 
 @Composable
-fun RewardsScreen(vm: RewardsViewModel) {
+fun RewardsScreen(vm: RewardsViewModel, onOpenPremium: () -> Unit) {
     val s by vm.state.collectAsStateWithLifecycle()
     val toast by vm.toast.collectAsStateWithLifecycle()
     var confirm by remember { mutableStateOf<ShopItem?>(null) }
@@ -61,6 +61,16 @@ fun RewardsScreen(vm: RewardsViewModel) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text("Coins: ${s.coins}", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.secondary)
+            }
+        }
+
+        Card(Modifier.fillMaxWidth()) {
+            Row(Modifier.padding(start = 16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                Column(Modifier.weight(1f).padding(vertical = 12.dp)) {
+                    Text("Plan: Free", fontWeight = FontWeight.SemiBold)
+                    Text("Premium is not available yet; nothing is locked.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                TextButton(onClick = onOpenPremium) { Text("Details") }
             }
         }
 

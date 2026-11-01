@@ -503,3 +503,12 @@ class BlockerViewModel(private val container: AppContainer) : ViewModel() {
     fun pause(minutes: Int) { viewModelScope.launch { repo.pauseProtection(minutes, emergency = false) } }
     fun resume() { viewModelScope.launch { repo.resumeProtection() } }
 }
+
+// ================================================================ Premium
+
+class PremiumViewModel(container: AppContainer) : ViewModel() {
+    val entitlement: StateFlow<com.levelup.app.domain.Entitlement> = container.entitlements.entitlement.stateIn(
+        viewModelScope, SharingStarted.WhileSubscribed(5_000),
+        com.levelup.app.domain.Entitlement(com.levelup.app.domain.EntitlementState.FREE, billingAvailable = false),
+    )
+}

@@ -47,6 +47,7 @@ import com.levelup.app.domain.RewardCatalog
 import com.levelup.app.ui.screens.BlockerScreen
 import com.levelup.app.ui.screens.FocusScreen
 import com.levelup.app.ui.screens.OnboardingScreen
+import com.levelup.app.ui.screens.PremiumScreen
 import com.levelup.app.ui.screens.ProgressScreen
 import com.levelup.app.ui.screens.RewardsScreen
 import com.levelup.app.ui.screens.RoutineScreen
@@ -56,6 +57,7 @@ import com.levelup.app.ui.theme.LevelUpTheme
 import com.levelup.app.ui.viewmodel.BlockerViewModel
 import com.levelup.app.ui.viewmodel.FocusViewModel
 import com.levelup.app.ui.viewmodel.OnboardingViewModel
+import com.levelup.app.ui.viewmodel.PremiumViewModel
 import com.levelup.app.ui.viewmodel.ProgressViewModel
 import com.levelup.app.ui.viewmodel.RewardsViewModel
 import com.levelup.app.ui.viewmodel.RoutineViewModel
@@ -74,6 +76,7 @@ private enum class Dest(val route: String, val label: String, val icon: ImageVec
 
 private const val SETTINGS_ROUTE = "settings"
 private const val BLOCKER_ROUTE = "blocker"
+private const val PREMIUM_ROUTE = "premium"
 
 @Composable
 private inline fun <reified VM : ViewModel> rememberVm(crossinline create: () -> VM): VM =
@@ -114,8 +117,12 @@ private fun MainScaffold(
     val nav = rememberNavController()
     val backStack by nav.currentBackStackEntryAsState()
     val destination = backStack?.destination
-    val onSettings = destination?.route == SETTINGS_ROUTE || destination?.route == BLOCKER_ROUTE
-    val subTitle = if (destination?.route == BLOCKER_ROUTE) "Distraction protection" else "Settings"
+    val onSettings = destination?.route in setOf(SETTINGS_ROUTE, BLOCKER_ROUTE, PREMIUM_ROUTE)
+    val subTitle = when (destination?.route) {
+        BLOCKER_ROUTE -> "Distraction protection"
+        PREMIUM_ROUTE -> "Premium"
+        else -> "Settings"
+    }
     var pendingAdd by remember { mutableStateOf(false) }
 
     // Tapping a focus-interruption notification opens the Focus tab.
@@ -193,7 +200,10 @@ private fun MainScaffold(
                 FocusScreen(rememberVm { FocusViewModel(container.repository) }, onOpenBlocker = { nav.navigate(BLOCKER_ROUTE) { launchSingleTop = true } })
             }
             composable(Dest.PROGRESS.route) { ProgressScreen(rememberVm { ProgressViewModel(container.repository) }) }
-            composable(Dest.REWARDS.route) { RewardsScreen(rememberVm { RewardsViewModel(container.repository) }) }
+            composable(Dest.REWARDS.route) {
+                RewardsScreen(rememberVm { RewardsViewModel(container.repository) }, onOpenPremium = { nav.navigate(PREMIUM_ROUTE) { launchSingleTop = true } })
+            }
+            composable(PREMIUM_ROUTE) { PremiumScreen(rememberVm { PremiumViewModel(container) }) }
             composable(SETTINGS_ROUTE) {
                 SettingsScreen(rememberVm { SettingsViewModel(container) }, onOpenBlocker = { nav.navigate(BLOCKER_ROUTE) { launchSingleTop = true } })
             }

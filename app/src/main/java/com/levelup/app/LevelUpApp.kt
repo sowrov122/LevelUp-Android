@@ -3,7 +3,9 @@ package com.levelup.app
 import android.app.Application
 import android.content.Context
 import com.levelup.app.data.LevelUpDatabase
+import com.levelup.app.data.EntitlementProvider
 import com.levelup.app.data.LevelUpRepository
+import com.levelup.app.data.NoBillingEntitlementProvider
 import com.levelup.app.data.SettingsStore
 import com.levelup.app.notifications.ReminderManager
 import com.levelup.app.service.EssentialApps
@@ -25,6 +27,7 @@ class AppContainer(context: Context) {
         essentialPackages = { EssentialApps.all(appContext) },
     )
     val notifier = GuardNotifier(appContext)
+    val entitlements: EntitlementProvider = NoBillingEntitlementProvider()
     val guard = GuardController(appContext, repository, settings)
 }
 

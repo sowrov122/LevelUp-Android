@@ -29,8 +29,8 @@ Versions are pinned in `gradle/libs.versions.toml` (AGP 8.7.0, Kotlin 2.0.21, KS
 | 5 Focus timer (persisted, monotonic clock, reboot-safe, cancel = no reward, capped reward) + Cosmic Observatory canvas driven by saved totals | done (no sound/vibration yet) |
 | 6 Distraction protection prototype | done (uncompiled): focus-only, UsageStatsManager polling in a foreground service, opt-in app list, never-block essentials, per-launch dedupe + cooldown, emergency pause, interruption history, master off switch. No AccessibilityService, no overlay. |
 | 7 Progress (7/30-day charts, 5-week heatmap, category time), achievements, coin shop (themes + observatory items), JSON export | done (no CSV, no monthly view) |
-| 8 Premium/billing | **not implemented**; nothing is locked or sold |
-| 9 QA | unit tests written; manual device tests still to do |
+| 8 Premium foundation | done (uncompiled): `EntitlementProvider` abstraction, feature catalogue, Premium screen. **Billing is not implemented**; every user is on the free plan and nothing is locked or for sale. |
+| 9 QA / privacy | unit tests, repository-flow and component tests written, CI compiles instrumented tests and runs lint; **manual device tests not run yet** (`docs/MANUAL-TEST-PLAN.md`); privacy summary in `PRIVACY.md` |
 
 ## Known limitations / deviations
 - Distraction protection (Phase 6): detects selected apps reaching the foreground only while a focus session is RUNNING and
@@ -50,3 +50,12 @@ Versions are pinned in `gradle/libs.versions.toml` (AGP 8.7.0, Kotlin 2.0.21, KS
 Task: ≤30 min = 5, ≤60 = 10, ≤120 = 20, longer = 25 (points = XP). All high-priority done: +20. Every task done: +30
 (+coins). Focus: 1 XP/min, 1 point per 5 min, 1 coin per 10 min, daily cap 120 min (configurable), sessions under 5 min earn nothing.
 Level: XP to advance from level L = 100 + 25·L. Daily points are floored at 0; the ledger keeps the true signed history.
+
+## Testing
+- `./gradlew testDebugUnitTest` – scoring, levels, streaks, time/DST/midnight, focus maths, distraction policy, premium rules.
+- `./gradlew connectedDebugAndroidTest` (emulator/device) – Room ledger constraints, repository flows (toggle idempotency,
+  history preserved after edits/deletes, focus reward once, cancel earns nothing) and component UI tests.
+- Manual checklist: `docs/MANUAL-TEST-PLAN.md`. **No manual results have been recorded yet.**
+- Logging audit: the app contains no `Log`/`println` calls, so no personal data is written to logcat.
+- Not covered by automated tests: full-screen Compose flows (onboarding, create/edit task, permission re-enable), the guard service,
+  notification delivery and reboot recovery.
