@@ -88,21 +88,27 @@ data class TodayUiState(
     val streaks: Streaks = Streaks(0, 0),
     val nextTask: TaskRowUi? = null,
     val focusMinutes: Int = 0,
+    val heroSessions: Int = 0,
+    val heroMinutes: Int = 0,
+    val heroOwned: Set<String> = emptySet(),
+    val reducedMotion: Boolean = false,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class TodayViewModel(private val repo: LevelUpRepository) : ViewModel() {
-    private data class Extras(val focusMinutes: Int, val coins: Int, val name: String, val now: Long)
+    private data class Extras(val focusMinutes: Int, val coins: Int, val name: String, val now: Long, val reducedMotion: Boolean)
+    private data class Hero(val sessions: Int, val minutes: Int, val owned: Set<String>)
 
     val state: StateFlow<TodayUiState> = repo.observeDate().flatMapLatest { date ->
         flow { repo.ensureDay(date); emit(Unit) }.flatMapLatest {
             val extras = combine(
                 repo.observeFocusMinutesOn(date), repo.observeCoins(), repo.settingsFlow, ticker(30_000),
-            ) { focus, coins, settings, now -> Extras(focus, coins, settings.displayName, now) }
+            ) { focus, coins, settings, now -> Extras(focus, coins, settings.displayName, now, settings.reducedMotion) }
+            val hero = combine(repo.observeFocusStats(), repo.observeOwnedIds()) { st, owned -> Hero(st.first, st.second, owned) }
             combine(
                 repo.observeInstances(date), repo.observePointsOn(date), repo.observeTotalXp(),
-                repo.observeSummaries(), extras,
-            ) { instances, points, xp, summaries, ex -> build(date, instances, points, xp, summaries, ex) }
+                repo.observeSummaries(), combine(extras, hero) { e, h -> e to h },
+            ) { instances, points, xp, summaries, pair -> build(date, instances, points, xp, summaries, pair.first, pair.second) }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TodayUiState())
 
@@ -113,6 +119,7 @@ class TodayViewModel(private val repo: LevelUpRepository) : ViewModel() {
         xp: Long,
         summaries: List<DaySummary>,
         ex: Extras,
+        hero: Hero,
     ): TodayUiState {
         val rows = instances.map { i ->
             val done = i.status == TaskStatus.COMPLETED
@@ -146,6 +153,10 @@ class TodayViewModel(private val repo: LevelUpRepository) : ViewModel() {
             streaks = ScoringEngine.calculateStreaks(summaries, date),
             nextTask = rows.firstOrNull { it.status == TaskStatus.PENDING },
             focusMinutes = ex.focusMinutes,
+            heroSessions = hero.sessions,
+            heroMinutes = hero.minutes,
+            heroOwned = hero.owned,
+            reducedMotion = ex.reducedMotion,
         )
     }
 

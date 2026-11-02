@@ -14,7 +14,7 @@ data class ShopItem(
 /** Cosmetic-only items. Nothing here changes scoring. Ids starting with "obs_" are drawn on the station. */
 object RewardCatalog {
     const val DEFAULT_THEME_ID = "default"
-    const val DEFAULT_THEME_COLOR = 0xFFF4A34B
+    const val DEFAULT_THEME_COLOR = 0xFF91B8F0
 
     val items: List<ShopItem> = listOf(
         // Base
@@ -32,7 +32,8 @@ object RewardCatalog {
         ShopItem("obs_moon", "Moon", "A quiet moon in your sky.", 300, ShopCategory.PLANET),
         ShopItem("obs_new_planet", "New Planet", "A second, warm-coloured world.", 10_000, ShopCategory.PLANET),
         // Themes
-        ShopItem("theme_moonlit", "Moonlit theme", "Cool silver-blue accent colour.", 60, ShopCategory.THEME, 0xFF8FB8F0),
+        ShopItem("theme_ember", "Ember theme", "Warm amber accent colour.", 60, ShopCategory.THEME, 0xFFF4A34B),
+        ShopItem("theme_moonlit", "Moonlit theme", "Cool silver accent colour.", 60, ShopCategory.THEME, 0xFFB8C4D6),
         ShopItem("theme_forest", "Forest theme", "Soft moss-green accent colour.", 60, ShopCategory.THEME, 0xFF7BC98F),
     )
 

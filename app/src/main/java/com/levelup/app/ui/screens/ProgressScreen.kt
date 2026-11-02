@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
+import com.levelup.app.ui.components.AppCard
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -58,15 +58,15 @@ fun ProgressScreen(vm: ProgressViewModel) {
         }
 
         SectionTitle("Daily completion (%)")
-        Card(Modifier.fillMaxWidth()) { Box(Modifier.padding(12.dp)) { BarChart(s.completionBars, maxValue = 100) } }
+        AppCard(Modifier.fillMaxWidth()) { Box(Modifier.padding(12.dp)) { BarChart(s.completionBars, maxValue = 100) } }
 
         SectionTitle("Daily points")
-        Card(Modifier.fillMaxWidth()) {
+        AppCard(Modifier.fillMaxWidth()) {
             Box(Modifier.padding(12.dp)) { BarChart(s.pointsBars, barColor = MaterialTheme.colorScheme.secondary) }
         }
 
         SectionTitle("Last 5 weeks")
-        Card(Modifier.fillMaxWidth()) {
+        AppCard(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 s.heat.chunked(7).forEach { week ->
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -111,7 +111,7 @@ fun ProgressScreen(vm: ProgressViewModel) {
 
         SectionTitle("Achievements")
         s.achievements.forEach { a ->
-            Card(Modifier.fillMaxWidth()) {
+            AppCard(Modifier.fillMaxWidth()) {
                 Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                     Column(Modifier.weight(1f)) {
                         Text(a.def.title, fontWeight = FontWeight.SemiBold)

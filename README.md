@@ -64,3 +64,6 @@ Level: XP to advance from level L = 100 + 25·L. Daily points are floored at 0; 
 Debug builds show a "Testing only / +10,000" card at the top of the Rewards tab. Each tap adds 10,000 coins through the normal
 ledger (type `TEST_GRANT`, note "Test coins (debug build only)"), so it is visible in the ledger and the JSON export. The button and
 the repository method are disabled in release builds (`BuildConfig.DEBUG`).
+
+## Design system
+See `docs/DESIGN-SYSTEM.md` for tokens, shared components and the per-screen audit.

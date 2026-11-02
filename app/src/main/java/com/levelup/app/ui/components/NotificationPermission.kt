@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -66,7 +65,7 @@ fun NotificationPermissionCard(modifier: Modifier = Modifier) {
 
     if (enabled) return
 
-    Card(modifier.fillMaxWidth()) {
+    AppCard(modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             Text("Reminders are turned off", style = MaterialTheme.typography.titleSmall)
             Text(

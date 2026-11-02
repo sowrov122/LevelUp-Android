@@ -18,7 +18,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -54,6 +56,10 @@ import com.levelup.app.ui.screens.RoutineScreen
 import com.levelup.app.ui.screens.SettingsScreen
 import com.levelup.app.ui.screens.TodayScreen
 import com.levelup.app.ui.theme.LevelUpTheme
+import com.levelup.app.ui.theme.AppColors
+import com.levelup.app.ui.components.AppBottomBar
+import com.levelup.app.ui.components.AppTopBar
+import com.levelup.app.ui.components.NavItem
 import com.levelup.app.ui.viewmodel.BlockerViewModel
 import com.levelup.app.ui.viewmodel.FocusViewModel
 import com.levelup.app.ui.viewmodel.OnboardingViewModel
@@ -73,6 +79,8 @@ private enum class Dest(val route: String, val label: String, val icon: ImageVec
     PROGRESS("progress", "Progress", Icons.Filled.CheckCircle),
     REWARDS("rewards", "Rewards", Icons.Filled.Star),
 }
+
+private val NAV_ITEMS = Dest.entries.map { NavItem(it.route, it.label, it.icon) }
 
 private const val SETTINGS_ROUTE = "settings"
 private const val BLOCKER_ROUTE = "blocker"
@@ -157,14 +165,11 @@ private fun MainScaffold(
     }
 
     Scaffold(
+        containerColor = AppColors.Background,
         topBar = {
-            if (!hideBars) TopAppBar(
-                title = { Text(if (onSettings) subTitle else Dest.entries.firstOrNull { it.route == destination?.route }?.label ?: "Level Up") },
-                navigationIcon = {
-                    if (onSettings) IconButton(onClick = { nav.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
+            if (!hideBars) AppTopBar(
+                title = if (onSettings) subTitle else Dest.entries.firstOrNull { it.route == destination?.route }?.label ?: "Level Up",
+                onBack = if (onSettings) fun() { nav.popBackStack() } else null,
                 actions = {
                     if (!onSettings) IconButton(onClick = { nav.navigate(SETTINGS_ROUTE) { launchSingleTop = true } }) {
                         Icon(Icons.Filled.Settings, contentDescription = "Settings")
@@ -173,16 +178,11 @@ private fun MainScaffold(
             )
         },
         bottomBar = {
-            if (!onSettings && !hideBars) NavigationBar {
-                Dest.entries.forEach { d ->
-                    NavigationBarItem(
-                        selected = destination?.hierarchy?.any { it.route == d.route } == true,
-                        onClick = { go(d.route) },
-                        icon = { Icon(d.icon, contentDescription = null) },
-                        label = { Text(d.label) },
-                    )
-                }
-            }
+            if (!onSettings && !hideBars) AppBottomBar(
+                items = NAV_ITEMS,
+                isSelected = { item -> destination?.hierarchy?.any { it.route == item.route } == true },
+                onSelect = { go(it.route) },
+            )
         },
     ) { inner ->
         NavHost(nav, startDestination = Dest.TODAY.route, modifier = Modifier.padding(inner)) {

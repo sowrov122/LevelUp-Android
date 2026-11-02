@@ -1,41 +1,59 @@
 package com.levelup.app.ui.theme
 
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-val AppBackground = Color(0xFF140E0A)
-val AppSurface = Color(0xFF211710)
-val AppSurface2 = Color(0xFF2D2118)
-val Accent = Color(0xFFF4A34B)
-val Gold = Color(0xFFFFCE00)
-val Success = Color(0xFF53D69A)
-val TextPrimary = Color(0xFFFFF4E6)
-val TextSecondary = Color(0xFFB6A393)
-val Danger = Color(0xFFF2735A)
+// Kept for existing call sites; both map to the design tokens.
+val Success: Color = AppColors.Success
+val Danger: Color = AppColors.Danger
 
+/**
+ * Material colour roles mapped to the tokens:
+ *  - primary (soft blue, or the equipped theme colour) = progress, links, checked controls
+ *  - primaryContainer / secondaryContainer (lavender) = selected chips, nav indicator, primary buttons
+ *  - secondary (gold) = coins and rewards
+ */
 @Composable
-fun LevelUpTheme(accent: Color = Accent, content: @Composable () -> Unit) {
+fun LevelUpTheme(accent: Color = AppColors.ProgressBlue, content: @Composable () -> Unit) {
     val scheme = darkColorScheme(
         primary = accent,
-        onPrimary = AppBackground,
-        secondary = Gold,
-        onSecondary = AppBackground,
-        tertiary = Success,
-        onTertiary = AppBackground,
-        background = AppBackground,
-        onBackground = TextPrimary,
-        surface = AppSurface,
-        onSurface = TextPrimary,
-        surfaceVariant = AppSurface2,
-        onSurfaceVariant = TextSecondary,
-        surfaceContainer = AppSurface,
-        surfaceContainerLow = AppSurface,
-        surfaceContainerHigh = AppSurface2,
-        surfaceContainerHighest = AppSurface2,
-        outline = Color(0xFF5A4A3C),
-        error = Danger,
+        onPrimary = AppColors.Background,
+        primaryContainer = AppColors.Lavender,
+        onPrimaryContainer = AppColors.TextPrimary,
+        secondary = AppColors.RewardGold,
+        onSecondary = AppColors.Background,
+        secondaryContainer = AppColors.Lavender,
+        onSecondaryContainer = AppColors.TextPrimary,
+        tertiary = AppColors.Success,
+        onTertiary = AppColors.Background,
+        background = AppColors.Background,
+        onBackground = AppColors.TextPrimary,
+        surface = AppColors.Card,
+        onSurface = AppColors.TextPrimary,
+        surfaceVariant = AppColors.Elevated,
+        onSurfaceVariant = AppColors.TextSecondary,
+        surfaceContainerLowest = AppColors.Background,
+        surfaceContainerLow = AppColors.Card,
+        surfaceContainer = AppColors.Header,
+        surfaceContainerHigh = AppColors.Elevated,
+        surfaceContainerHighest = AppColors.Elevated,
+        outline = AppColors.Border,
+        outlineVariant = AppColors.Border,
+        error = AppColors.Danger,
+        onError = AppColors.Background,
     )
-    MaterialTheme(colorScheme = scheme, content = content)
+    MaterialTheme(
+        colorScheme = scheme,
+        shapes = Shapes(
+            extraSmall = RoundedCornerShape(Radii.chip),
+            small = RoundedCornerShape(Radii.chip),
+            medium = RoundedCornerShape(Radii.card),
+            large = RoundedCornerShape(Radii.dialog),
+        ),
+        content = content,
+    )
 }

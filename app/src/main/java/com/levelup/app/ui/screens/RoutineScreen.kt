@@ -20,7 +20,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
+import com.levelup.app.ui.components.AppCard
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -243,7 +243,7 @@ private fun DayRow(row: TaskRowUi, canToggle: Boolean, onToggle: (String, Boolea
             Text(start, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
             Text(end, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Card(
+        AppCard(
             Modifier.weight(1f),
             border = if (row.inProgress) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
         ) {
@@ -283,7 +283,7 @@ private fun RoutineRow(
     onDuplicate: () -> Unit,
 ) {
     val t = item.task
-    Card(Modifier.fillMaxWidth()) {
+    AppCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {

@@ -27,7 +27,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
+import com.levelup.app.ui.components.AppCard
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -59,6 +59,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.levelup.app.domain.Category
 import com.levelup.app.domain.Observatory
 import com.levelup.app.ui.components.BuildingStation
+import com.levelup.app.ui.components.PrimaryButton
 import com.levelup.app.ui.components.ObservatoryScene
 import com.levelup.app.ui.components.SectionTitle
 import com.levelup.app.ui.components.formatClock
@@ -227,15 +228,14 @@ fun FocusScreen(vm: FocusViewModel, onOpenBlocker: () -> Unit, onImmersive: (Boo
                     }
                 }
 
-                Button(
+                PrimaryButton(
+                    "Start Focus",
                     onClick = {
                         if (lockScreen) runCatching { (context as? Activity)?.startLockTask() }
                         vm.start(title, category, minutes)
                     },
-                    modifier = Modifier.fillMaxWidth(0.85f).height(56.dp),
-                    shape = CircleShape,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF140E0A)),
-                ) { Text("Start Focus", fontSize = 18.sp, fontWeight = FontWeight.SemiBold) }
+                    modifier = Modifier.fillMaxWidth(0.85f),
+                )
 
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
@@ -250,7 +250,7 @@ fun FocusScreen(vm: FocusViewModel, onOpenBlocker: () -> Unit, onImmersive: (Boo
                     Switch(checked = lockScreen, onCheckedChange = { lockScreen = it })
                 }
 
-                Card(Modifier.fillMaxWidth()) {
+                AppCard(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(14.dp)) {
                         Text(
                             when {
@@ -265,7 +265,7 @@ fun FocusScreen(vm: FocusViewModel, onOpenBlocker: () -> Unit, onImmersive: (Boo
                 }
 
                 state.lastOutcome?.let { o ->
-                    Card(Modifier.fillMaxWidth()) {
+                    AppCard(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(16.dp)) {
                             if (o.completed) {
                                 Text("Session complete", style = MaterialTheme.typography.titleMedium)

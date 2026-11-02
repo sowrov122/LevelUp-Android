@@ -16,7 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
+import com.levelup.app.ui.components.AppCard
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -70,7 +70,7 @@ fun RewardsScreen(vm: RewardsViewModel, onOpenPremium: () -> Unit) {
     ) {
         toast?.let {
             item {
-                Card(Modifier.fillMaxWidth()) {
+                AppCard(Modifier.fillMaxWidth()) {
                     Row(Modifier.padding(start = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(it, Modifier.weight(1f).padding(vertical = 12.dp))
                         TextButton(onClick = { vm.consumeToast() }) { Text("OK") }
@@ -83,7 +83,7 @@ fun RewardsScreen(vm: RewardsViewModel, onOpenPremium: () -> Unit) {
         item {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text("Reward Shop", Modifier.weight(1f), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                Card(shape = RoundedCornerShape(50)) {
+                AppCard(shape = RoundedCornerShape(50)) {
                     Text(
                         "🪙 ${coins(s.coins)}",
                         Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
@@ -96,7 +96,7 @@ fun RewardsScreen(vm: RewardsViewModel, onOpenPremium: () -> Unit) {
 
         if (BuildConfig.DEBUG) {
             item {
-                Card(Modifier.fillMaxWidth(), border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.6f))) {
+                AppCard(Modifier.fillMaxWidth(), border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.6f))) {
                     Row(Modifier.padding(start = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f).padding(vertical = 10.dp)) {
                             Text("Testing only", fontWeight = FontWeight.SemiBold)
@@ -114,7 +114,7 @@ fun RewardsScreen(vm: RewardsViewModel, onOpenPremium: () -> Unit) {
 
         // Level
         item {
-            Card(Modifier.fillMaxWidth()) {
+            AppCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text("Level ${s.level.level}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     ProgressBar(s.level.fraction)
@@ -141,7 +141,7 @@ fun RewardsScreen(vm: RewardsViewModel, onOpenPremium: () -> Unit) {
         if (category == ShopCategory.THEME) {
             item {
                 ItemCard(
-                    title = "Ember (default)", description = "Warm amber accent.", price = 0,
+                    title = "Twilight (default)", description = "Soft blue progress accent.", price = 0,
                     owned = true, equippable = true, equipped = s.equippedTheme == RewardCatalog.DEFAULT_THEME_ID,
                     affordable = true, preview = { ThemeSwatch(Color(RewardCatalog.DEFAULT_THEME_COLOR)) },
                     onEquip = { vm.equip(RewardCatalog.DEFAULT_THEME_ID) }, onBuy = {}, modifier = Modifier.fillMaxWidth(),
@@ -172,7 +172,7 @@ fun RewardsScreen(vm: RewardsViewModel, onOpenPremium: () -> Unit) {
         }
 
         item {
-            Card(Modifier.fillMaxWidth()) {
+            AppCard(Modifier.fillMaxWidth()) {
                 Row(Modifier.padding(start = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f).padding(vertical = 12.dp)) {
                         Text("Plan: Free", fontWeight = FontWeight.SemiBold)
@@ -225,7 +225,7 @@ private fun ItemCard(
     onBuy: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    AppCard(
         modifier,
         border = if (equipped || (owned && !equippable)) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
     ) {

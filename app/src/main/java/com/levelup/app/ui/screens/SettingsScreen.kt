@@ -12,7 +12,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
+import com.levelup.app.ui.components.AppCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -70,7 +70,7 @@ fun SettingsScreen(vm: SettingsViewModel, onOpenBlocker: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         status?.let {
-            Card(Modifier.fillMaxWidth()) {
+            AppCard(Modifier.fillMaxWidth()) {
                 Row(Modifier.padding(start = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(it, Modifier.weight(1f).padding(vertical = 12.dp))
                     TextButton(onClick = { vm.consumeStatus() }) { Text("OK") }

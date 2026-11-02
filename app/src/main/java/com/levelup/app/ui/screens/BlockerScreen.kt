@@ -19,7 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
+import com.levelup.app.ui.components.AppCard
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -55,6 +55,7 @@ import com.levelup.app.domain.InterruptionAction
 import com.levelup.app.domain.PopularApps
 import com.levelup.app.service.UsageAccess
 import com.levelup.app.ui.components.ConfirmDialog
+import com.levelup.app.ui.components.PrimaryButton
 import com.levelup.app.ui.components.NotificationPermissionCard
 import com.levelup.app.ui.components.SectionTitle
 import com.levelup.app.ui.viewmodel.BlockerViewModel
@@ -100,7 +101,7 @@ fun BlockerScreen(vm: BlockerViewModel, onStartFocus: () -> Unit) {
         ) {
             // Hero
             item {
-                Card(Modifier.fillMaxWidth()) {
+                AppCard(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Shield(Modifier.size(84.dp))
                         Text("Stay Focused", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
@@ -133,7 +134,7 @@ fun BlockerScreen(vm: BlockerViewModel, onStartFocus: () -> Unit) {
             }
 
             item {
-                Card(Modifier.fillMaxWidth()) {
+                AppCard(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
@@ -171,7 +172,7 @@ fun BlockerScreen(vm: BlockerViewModel, onStartFocus: () -> Unit) {
 
             // Honest note instead of an "adult content" switch
             item {
-                Card(Modifier.fillMaxWidth()) {
+                AppCard(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("Adult content (18+)", fontWeight = FontWeight.SemiBold)
                         Text(
@@ -199,7 +200,7 @@ fun BlockerScreen(vm: BlockerViewModel, onStartFocus: () -> Unit) {
 
             // Strict mode
             item {
-                Card(Modifier.fillMaxWidth()) {
+                AppCard(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("Strict mode", Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
@@ -306,7 +307,8 @@ fun BlockerScreen(vm: BlockerViewModel, onStartFocus: () -> Unit) {
             }
         }
 
-        Button(
+        PrimaryButton(
+            "Start Focus & Block",
             onClick = {
                 if (!s.settings.blockerEnabled) {
                     if (!s.usageAccess) explain = true else { vm.setEnabled(true); onStartFocus() }
@@ -314,9 +316,8 @@ fun BlockerScreen(vm: BlockerViewModel, onStartFocus: () -> Unit) {
                     onStartFocus()
                 }
             },
-            modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp).fillMaxWidth().height(52.dp),
-            shape = RoundedCornerShape(26.dp),
-        ) { Text("Start Focus & Block", fontWeight = FontWeight.Bold) }
+            modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp).fillMaxWidth(),
+        )
     }
 
     if (explain) {
@@ -355,7 +356,7 @@ fun BlockerScreen(vm: BlockerViewModel, onStartFocus: () -> Unit) {
 
 @Composable
 private fun AppToggleRow(app: InstalledApp, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Card(Modifier.fillMaxWidth()) {
+    AppCard(Modifier.fillMaxWidth()) {
         Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             val icon = app.icon
             if (icon != null) {

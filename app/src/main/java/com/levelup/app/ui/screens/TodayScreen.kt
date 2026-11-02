@@ -15,7 +15,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
+import com.levelup.app.ui.components.AppCard
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -25,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -32,6 +33,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.levelup.app.domain.LevelTitles
 import com.levelup.app.domain.TaskStatus
 import com.levelup.app.ui.components.EmptyState
+import com.levelup.app.ui.components.PrimaryButton
+import com.levelup.app.ui.components.ObservatoryScene
 import com.levelup.app.ui.components.ProgressBar
 import com.levelup.app.ui.components.ProgressRing
 import com.levelup.app.ui.components.SectionTitle
@@ -75,27 +78,23 @@ fun TodayScreen(
         item {
             val hour = LocalTime.now().hour
             val greeting = when { hour < 12 -> "Good morning"; hour < 17 -> "Good afternoon"; else -> "Good evening" }
-            Column {
-                Text(
-                    if (state.name.isBlank()) greeting else "$greeting,",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                if (state.name.isNotBlank()) {
-                    Text(state.name, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                }
-                if (date != null) {
-                    Text(
-                        date.format(DateTimeFormatter.ofPattern("EEE, d MMM yyyy")),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+            Box(Modifier.fillMaxWidth()) {
+                ObservatoryScene(state.heroSessions, state.heroMinutes, state.heroOwned, state.reducedMotion, Modifier.clip(RoundedCornerShape(24.dp)))
+                Column(Modifier.padding(18.dp)) {
+                    Text(greeting + if (state.name.isBlank()) "" else ",", style = MaterialTheme.typography.titleMedium, color = Color.White.copy(alpha = 0.85f))
+                    if (state.name.isNotBlank()) {
+                        Text(state.name, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = Color.White)
+                    }
+                    if (date != null) {
+                        Text(date.format(DateTimeFormatter.ofPattern("EEE, d MMM yyyy")), color = Color.White.copy(alpha = 0.75f))
+                    }
                 }
             }
         }
 
         // Level card
         item {
-            Card(Modifier.fillMaxWidth(), border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))) {
+            AppCard(Modifier.fillMaxWidth(), border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))) {
                 Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     Box(
                         Modifier.size(56.dp).clip(CircleShape).border(2.dp, MaterialTheme.colorScheme.secondary, CircleShape),
@@ -119,7 +118,7 @@ fun TodayScreen(
         // Progress ring + stat tiles
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Card(Modifier.weight(1f)) {
+                AppCard(Modifier.weight(1f)) {
                     Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         val pct = if (state.total == 0) 0 else state.completed * 100 / state.total
                         ProgressRing(
@@ -141,7 +140,7 @@ fun TodayScreen(
 
         // Motivation
         item {
-            Card(Modifier.fillMaxWidth()) {
+            AppCard(Modifier.fillMaxWidth()) {
                 Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
                     Text("❝", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
                     Column {
@@ -160,16 +159,18 @@ fun TodayScreen(
         }
 
         item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onStartFocus, modifier = Modifier.weight(1f)) { Text("Start Focus") }
-                OutlinedButton(onClick = onAddTask, modifier = Modifier.weight(1f)) { Text("Add Task") }
-                OutlinedButton(onClick = onEditRoutine, modifier = Modifier.weight(1f)) { Text("Routine") }
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                PrimaryButton("Continue Your Routine  →", onEditRoutine, Modifier.fillMaxWidth())
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = onStartFocus, modifier = Modifier.weight(1f)) { Text("Start Focus") }
+                    OutlinedButton(onClick = onAddTask, modifier = Modifier.weight(1f)) { Text("Add Task") }
+                }
             }
         }
 
         state.nextTask?.let { next ->
             item {
-                Card(Modifier.fillMaxWidth()) {
+                AppCard(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
                         Text(
                             if (next.inProgress) "Happening now" else "Up next",
@@ -202,7 +203,7 @@ fun TodayScreen(
 
 @Composable
 private fun TaskRow(row: TaskRowUi, highlighted: Boolean, onToggle: (Boolean) -> Unit) {
-    Card(
+    AppCard(
         Modifier.fillMaxWidth(),
         border = if (highlighted) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
     ) {
@@ -231,7 +232,7 @@ private fun TaskRow(row: TaskRowUi, highlighted: Boolean, onToggle: (Boolean) ->
 
 @Composable
 private fun MiniStat(icon: String, value: String, label: String) {
-    Card(Modifier.fillMaxWidth()) {
+    AppCard(Modifier.fillMaxWidth()) {
         Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(icon, style = MaterialTheme.typography.titleLarge)
             Column {

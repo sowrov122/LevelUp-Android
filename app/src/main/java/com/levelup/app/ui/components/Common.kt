@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -22,8 +21,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -33,24 +30,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.levelup.app.ui.theme.AppColors
+import com.levelup.app.ui.theme.Radii
 
+/** Kept for existing call sites; delegates to the design-system header. */
 @Composable
-fun SectionTitle(text: String, modifier: Modifier = Modifier) {
-    Text(
-        text,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.SemiBold,
-        modifier = modifier.padding(top = 8.dp, bottom = 4.dp),
-    )
-}
+fun SectionTitle(text: String, modifier: Modifier = Modifier) = SectionHeader(text, modifier)
 
 @Composable
 fun StatCard(label: String, value: String, modifier: Modifier = Modifier, sub: String? = null) {
-    Card(modifier = modifier) {
+    AppCard(modifier = modifier) {
         Column(Modifier.padding(12.dp)) {
-            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            if (sub != null) Text(sub, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(label, style = MaterialTheme.typography.labelMedium, color = AppColors.TextSecondary)
+            Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
+            if (sub != null) Text(sub, style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
         }
     }
 }
@@ -62,13 +55,8 @@ fun EmptyState(title: String, message: String, modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Text(title, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
-        Text(
-            message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
+        Text(title, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center, color = AppColors.TextPrimary)
+        Text(message, style = MaterialTheme.typography.bodyMedium, color = AppColors.TextSecondary, textAlign = TextAlign.Center)
     }
 }
 
@@ -82,13 +70,18 @@ fun ConfirmDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = AppColors.Elevated,
+        titleContentColor = AppColors.TextPrimary,
+        textContentColor = AppColors.TextSecondary,
+        shape = RoundedCornerShape(Radii.dialog),
         title = { Text(title) },
         text = { Text(message) },
-        confirmButton = { TextButton(onClick = onConfirm) { Text(confirmLabel) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        confirmButton = { TextButton(onClick = onConfirm) { Text(confirmLabel, color = AppColors.ProgressBlue) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = AppColors.TextSecondary) } },
     )
 }
 
+/** Circular progress in the progress accent on a quiet track. */
 @Composable
 fun ProgressRing(
     fraction: Float,
@@ -96,7 +89,6 @@ fun ProgressRing(
     subText: String,
     modifier: Modifier = Modifier.size(120.dp),
 ) {
-    val track = MaterialTheme.colorScheme.outline
     val color = MaterialTheme.colorScheme.primary
     Box(
         modifier.semantics { contentDescription = "Progress $centerText $subText" },
@@ -104,24 +96,20 @@ fun ProgressRing(
     ) {
         Canvas(Modifier.fillMaxSize().padding(8.dp)) {
             val stroke = Stroke(width = 12.dp.toPx(), cap = StrokeCap.Round)
-            drawArc(track, 0f, 360f, false, style = stroke)
-            if (fraction > 0f) {
-                drawArc(
-                    Brush.linearGradient(listOf(Color(0xFFFFCE00), color), start = Offset(0f, 0f), end = Offset(size.width, size.height)),
-                    -90f, 360f * fraction.coerceIn(0f, 1f), false, style = stroke,
-                )
-            }
+            drawArc(AppColors.Border, 0f, 360f, false, style = stroke)
+            if (fraction > 0f) drawArc(color, -90f, 360f * fraction.coerceIn(0f, 1f), false, style = stroke)
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(centerText, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Text(subText, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(centerText, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = AppColors.TextPrimary)
+            Text(subText, style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
         }
     }
 }
 
+/** Horizontal progress bar. Default fill is the progress accent; pass AppColors.RewardGold for rewards. */
 @Composable
 fun ProgressBar(fraction: Float, modifier: Modifier = Modifier, color: Color = MaterialTheme.colorScheme.primary, height: Dp = 8.dp) {
-    Box(modifier.fillMaxWidth().height(height).clip(RoundedCornerShape(50)).background(MaterialTheme.colorScheme.outline)) {
+    Box(modifier.fillMaxWidth().height(height).clip(RoundedCornerShape(50)).background(AppColors.Border)) {
         Box(
             Modifier
                 .fillMaxHeight()
@@ -157,9 +145,9 @@ fun BarChart(
                         .fillMaxWidth(0.7f)
                         .height(h.dp)
                         .clip(RoundedCornerShape(4.dp))
-                        .background(if (value <= 0) MaterialTheme.colorScheme.outline else barColor),
+                        .background(if (value <= 0) AppColors.Border else barColor),
                 )
-                Text(label, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                Text(label, style = MaterialTheme.typography.labelSmall, maxLines = 1, color = AppColors.TextSecondary)
             }
         }
     }
