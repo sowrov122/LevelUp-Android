@@ -138,6 +138,7 @@ class TodayViewModel(private val repo: LevelUpRepository) : ViewModel() {
                 inProgress = !done && ex.now >= i.scheduledStart && ex.now < i.scheduledEnd,
                 priority = i.priority,
                 pointsAwarded = i.pointsAwarded,
+                xpReward = ScoringEngine.calculateTaskReward(i.durationMinutes).xp,
             )
         }
         return TodayUiState(

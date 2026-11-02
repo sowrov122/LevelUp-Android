@@ -32,7 +32,7 @@ Material roles (`ui/theme/Theme.kt`): `primary` = ProgressBlue (or the equipped 
 | Screen | Reused now | To update in later phases |
 |---|---|---|
 | App shell (`AppRoot`) | `AppTopBar`, `AppBottomBar`, solid background | none |
-| Today | `AppCard`, `PrimaryButton`, `ProgressRing`, `ProgressBar`; theme colours | hero observatory banner is large and decorative; emoji stat tiles → `IconBadge`; level badge border colour |
+| Today | **Phase 2 done**: `AppCard`, `PrimaryButton`/`SecondaryButton`, `ProgressRing`, `ProgressBar`, `ArtImage`, `FlameIcon`; stateless `TodayContent` with tests | none |
 | Routine | `AppCard`; chips inherit lavender selection from theme | date strip uses raw `clickable` boxes → `AppChip`-style; mode toggle → `AppChip`; editor dialog fields |
 | Focus | `AppCard`, `PrimaryButton` | immersive session view and idle view use their own space palette on purpose; align text colours and chips |
 | Progress | `AppCard`, `BarChart`, `ProgressBar`, `SectionHeader` | Day/Week/Month tabs, achievements list, heatmap colours |
