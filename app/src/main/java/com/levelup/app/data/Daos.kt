@@ -169,6 +169,12 @@ interface FocusSessionDao {
     )
     suspend fun maxCompletedInOneDay(): Int
 
+    @Query("SELECT COALESCE(SUM(rewardedMinutes), 0) FROM focus_sessions WHERE localDate = :date AND status = 'COMPLETED'")
+    fun observeRewardedMinutesOn(date: String): Flow<Int>
+
+    @Query("SELECT * FROM focus_sessions WHERE status = 'COMPLETED' ORDER BY endedAt DESC LIMIT :limit")
+    fun observeRecentCompleted(limit: Int): Flow<List<FocusSessionEntity>>
+
     @Query("SELECT * FROM focus_sessions ORDER BY createdAt")
     suspend fun getAll(): List<FocusSessionEntity>
 }

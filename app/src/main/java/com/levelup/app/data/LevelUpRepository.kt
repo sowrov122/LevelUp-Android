@@ -97,6 +97,7 @@ class LevelUpRepository(
     suspend fun bootstrap() {
         ensureSeeded()
         recoverFocusSession()
+        finishDueFocusSession()
         ensureDay(today())
         reminders.rescheduleAll()
     }
@@ -375,6 +376,18 @@ class LevelUpRepository(
     // ------------------------------------------------------------------ focus
 
     fun observeActiveFocus(): Flow<FocusSessionEntity?> = focusDao.observeActive()
+    fun observeRewardedMinutesOn(date: LocalDate): Flow<Int> = focusDao.observeRewardedMinutesOn(date.toString())
+    fun observeRecentFocus(limit: Int): Flow<List<FocusSessionEntity>> = focusDao.observeRecentCompleted(limit)
+
+    /**
+     * Finishes a RUNNING session whose planned time has passed while the app was closed or in the background.
+     * Safe to call any time: rewards are still granted exactly once.
+     */
+    suspend fun finishDueFocusSession(): FocusOutcome? {
+        val s = focusDao.getActive() ?: return null
+        if (s.status != FocusStatus.RUNNING || elapsedSeconds(s) < s.plannedSeconds) return null
+        return finishFocus(s.id)
+    }
 
     fun elapsedSeconds(s: FocusSessionEntity): Long =
         FocusMath.elapsedSeconds(s.status, s.accumulatedSeconds, s.resumedAtElapsed, s.resumedAtWall, elapsedRealtime(), nowMillis())
@@ -409,7 +422,7 @@ class LevelUpRepository(
                 ),
             )
             id
-        }
+        }.also { id -> if (id != null) reminders.scheduleFocusEnd(nowMillis() + plannedSeconds.coerceAtLeast(60) * 1000) }
     }
 
     suspend fun pauseFocus(id: String) {
@@ -425,19 +438,29 @@ class LevelUpRepository(
                 ),
             )
         }
+        reminders.cancelFocusEnd()
     }
 
     suspend fun resumeFocus(id: String) {
+        var remainingSeconds = -1L
         db.withTransaction {
             val s = focusDao.get(id) ?: return@withTransaction
             if (s.status != FocusStatus.PAUSED) return@withTransaction
             val now = nowMillis()
             focusDao.update(s.copy(status = FocusStatus.RUNNING, resumedAtElapsed = elapsedRealtime(), resumedAtWall = now, updatedAt = now))
+            remainingSeconds = s.plannedSeconds - s.accumulatedSeconds
         }
+        if (remainingSeconds > 0) reminders.scheduleFocusEnd(nowMillis() + remainingSeconds * 1000)
     }
 
     /** Sessions shorter than 5 minutes are discarded without reward. Rewards are granted exactly once. */
     suspend fun finishFocus(id: String): FocusOutcome? {
+        val outcome = finishFocusInternal(id)
+        if (outcome != null) reminders.cancelFocusEnd()
+        return outcome
+    }
+
+    private suspend fun finishFocusInternal(id: String): FocusOutcome? {
         val zone = zone()
         val cap = settings.current().focusDailyCapMinutes
         return db.withTransaction<FocusOutcome?> {
@@ -491,6 +514,7 @@ class LevelUpRepository(
                 s.copy(status = FocusStatus.CANCELLED, accumulatedSeconds = minOf(elapsedSeconds(s), s.plannedSeconds), endedAt = now, resumedAtElapsed = -1, updatedAt = now),
             )
         }
+        reminders.cancelFocusEnd()
     }
 
     /** After a reboot a RUNNING session is paused with only the time we can prove. */

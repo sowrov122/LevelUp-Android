@@ -11,6 +11,7 @@ object Art {
     @DrawableRes val AvatarAstronaut = R.drawable.avatar_astronaut
 
     @DrawableRes val Coin = R.drawable.coin
+    @DrawableRes val StreakFlame = R.drawable.streak_flame
     @DrawableRes val Trophy = R.drawable.trophy
     @DrawableRes val BadgeMedal = R.drawable.badge_medal
     @DrawableRes val LevelUpCrest = R.drawable.levelup_crest

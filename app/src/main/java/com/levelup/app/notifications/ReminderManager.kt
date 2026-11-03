@@ -15,6 +15,7 @@ import com.levelup.app.R
 import com.levelup.app.data.LevelUpDatabase
 import com.levelup.app.data.RoutineTaskEntity
 import com.levelup.app.data.SettingsStore
+import com.levelup.app.domain.FocusOutcome
 import com.levelup.app.domain.TimeUtils
 import java.time.Instant
 import java.time.LocalTime
@@ -75,6 +76,46 @@ class ReminderManager(
         if (!wasSnoozed) schedule(task) // plan the next occurrence
     }
 
+    /** Alarm for the moment a running focus session reaches its planned end (inexact, may be a little late). */
+    fun scheduleFocusEnd(triggerAtMillis: Long) {
+        alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pending(ACTION_FOCUS_END, FOCUS_KEY))
+    }
+
+    fun cancelFocusEnd() {
+        alarmManager.cancel(pending(ACTION_FOCUS_END, FOCUS_KEY))
+    }
+
+    @SuppressLint("MissingPermission") // guarded by areNotificationsEnabled()
+    fun showFocusComplete(outcome: FocusOutcome) {
+        if (!outcome.completed) return
+        val nm = NotificationManagerCompat.from(context)
+        if (!nm.areNotificationsEnabled()) return
+        createChannel(context)
+        val open = PendingIntent.getActivity(
+            context, FOCUS_NOTIFICATION_ID,
+            Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                putExtra(MainActivity.EXTRA_DEST, "focus")
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val parts = buildList {
+            add("${outcome.focusedMinutes} min focused")
+            if (outcome.reward.xp > 0) add("+${outcome.reward.xp} XP")
+            if (outcome.reward.coins > 0) add("+${outcome.reward.coins} coins")
+        }.joinToString(" · ")
+        nm.notify(
+            FOCUS_NOTIFICATION_ID,
+            NotificationCompat.Builder(context, FOCUS_CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_stat_levelup)
+                .setContentTitle("Focus session complete")
+                .setContentText(parts)
+                .setAutoCancel(true)
+                .setContentIntent(open)
+                .build(),
+        )
+    }
+
     fun snooze(taskId: String) {
         NotificationManagerCompat.from(context).cancel(notificationId(taskId))
         val at = System.currentTimeMillis() + SNOOZE_MINUTES * 60_000L
@@ -129,11 +170,22 @@ class ReminderManager(
         const val ACTION_REMIND = "com.levelup.app.action.REMIND"
         const val ACTION_SNOOZE = "com.levelup.app.action.SNOOZE"
         const val ACTION_SNOOZE_FIRE = "com.levelup.app.action.SNOOZE_FIRE"
+        const val ACTION_FOCUS_END = "com.levelup.app.action.FOCUS_END"
+        const val FOCUS_CHANNEL_ID = "focus_complete"
+        private const val FOCUS_KEY = "focus"
+        private const val FOCUS_NOTIFICATION_ID = 9100
         const val EXTRA_TASK_ID = "task_id"
         const val SNOOZE_MINUTES = 10
 
         fun createChannel(context: Context) {
             val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            if (nm.getNotificationChannel(FOCUS_CHANNEL_ID) == null) {
+                nm.createNotificationChannel(
+                    NotificationChannel(FOCUS_CHANNEL_ID, "Focus sessions", NotificationManager.IMPORTANCE_DEFAULT).apply {
+                        description = "Tells you when a focus session has finished"
+                    },
+                )
+            }
             if (nm.getNotificationChannel(CHANNEL_ID) == null) {
                 nm.createNotificationChannel(
                     NotificationChannel(CHANNEL_ID, "Routine reminders", NotificationManager.IMPORTANCE_DEFAULT).apply {

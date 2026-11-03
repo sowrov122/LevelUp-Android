@@ -281,6 +281,10 @@ data class FocusUiState(
     val reducedMotion: Boolean = false,
     val protectionOn: Boolean = false,
     val strictMode: Boolean = false,
+    /** Minutes already rewarded today and the daily cap, so the screen can preview the real reward. */
+    val rewardedMinutesToday: Int = 0,
+    val dailyCapMinutes: Int = 120,
+    val recent: List<FocusSessionEntity> = emptyList(),
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -301,14 +305,22 @@ class FocusViewModel(private val repo: LevelUpRepository) : ViewModel() {
         }
     }
 
+    private val history: Flow<Pair<Int, List<FocusSessionEntity>>> = combine(
+        repo.observeDate().flatMapLatest { repo.observeRewardedMinutesOn(it) },
+        repo.observeRecentFocus(20),
+    ) { rewarded, recent -> rewarded to recent }
+
     val state: StateFlow<FocusUiState> = combine(
-        activeUi, repo.observeFocusStats(), repo.observeOwnedIds(), repo.settingsFlow, lastOutcome,
-    ) { active, stats, owned, settings, outcome ->
-        FocusUiState(
-            active, outcome, stats.first, stats.second, owned, settings.reducedMotion,
-            protectionOn = settings.blockerEnabled, strictMode = settings.blockerEnabled && settings.blockerStrict,
-        )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FocusUiState())
+        combine(activeUi, repo.observeFocusStats(), repo.observeOwnedIds(), repo.settingsFlow, lastOutcome) { active, stats, owned, settings, outcome ->
+            FocusUiState(
+                active, outcome, stats.first, stats.second, owned, settings.reducedMotion,
+                protectionOn = settings.blockerEnabled, strictMode = settings.blockerEnabled && settings.blockerStrict,
+                dailyCapMinutes = settings.focusDailyCapMinutes,
+            )
+        },
+        history,
+    ) { base, h -> base.copy(rewardedMinutesToday = h.first, recent = h.second) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FocusUiState())
 
     init {
         // The persisted timestamps are the source of truth; auto-finish when the plan is complete.
@@ -346,6 +358,7 @@ class FocusViewModel(private val repo: LevelUpRepository) : ViewModel() {
     fun finish(id: String) { viewModelScope.launch { repo.finishFocus(id)?.let { lastOutcome.value = it } } }
     fun cancel(id: String) { viewModelScope.launch { repo.cancelFocus(id) } }
     fun dismissOutcome() { lastOutcome.value = null }
+    fun setProtection(on: Boolean) { viewModelScope.launch { repo.updateSettingsQuiet { it.copy(blockerEnabled = on) } } }
 }
 
 // ========================================================== Progress

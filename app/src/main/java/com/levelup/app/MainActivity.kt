@@ -8,6 +8,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import com.levelup.app.notifications.ReminderManager
 import com.levelup.app.ui.AppRoot
 
@@ -22,6 +24,13 @@ class MainActivity : ComponentActivity() {
         openDest = intent?.getStringExtra(EXTRA_DEST)
         val container = (application as LevelUpApp).container
         setContent { AppRoot(container, openTaskId, { openTaskId = null }, openDest) { openDest = null } }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // A focus session may have reached its planned end while the app was closed: collect it now, once.
+        val repo = (application as LevelUpApp).container.repository
+        lifecycleScope.launch { repo.finishDueFocusSession() }
     }
 
     override fun onNewIntent(intent: Intent) {

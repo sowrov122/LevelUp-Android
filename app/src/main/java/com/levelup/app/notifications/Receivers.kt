@@ -12,11 +12,14 @@ import kotlinx.coroutines.launch
 class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val taskId = intent.getStringExtra(ReminderManager.EXTRA_TASK_ID) ?: return
-        val reminders = (context.applicationContext as LevelUpApp).container.reminders
+        val container = (context.applicationContext as LevelUpApp).container
+        val reminders = container.reminders
         val pending = goAsync()
         CoroutineScope(Dispatchers.Default).launch {
             try {
                 when (intent.action) {
+                    ReminderManager.ACTION_FOCUS_END ->
+                        container.repository.finishDueFocusSession()?.let { reminders.showFocusComplete(it) }
                     ReminderManager.ACTION_REMIND -> reminders.onReminderFired(taskId, wasSnoozed = false)
                     ReminderManager.ACTION_SNOOZE_FIRE -> reminders.onReminderFired(taskId, wasSnoozed = true)
                     ReminderManager.ACTION_SNOOZE -> reminders.snooze(taskId)

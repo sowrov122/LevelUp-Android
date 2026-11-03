@@ -139,4 +139,45 @@ class RepositoryFlowTest {
         assertEquals(0, db.routineTaskDao().count())
         assertEquals(0, db.taskInstanceDao().getForDate(repo.today().toString()).size)
     }
+
+    @Test fun sessionThatEndedInTheBackgroundIsRewardedOnceWhenCollected() = runBlocking {
+        val id = repo.startFocus("Deep work", null, 1500)!!
+        assertNull(repo.finishDueFocusSession())                       // not due yet: nothing happens
+        assertEquals(0L, db.scoreEventDao().totalXp())
+
+        wall += 1500_000; elapsed += 1500_000                          // the planned time passes while the app is away
+        val outcome = repo.finishDueFocusSession()
+        assertEquals(25, outcome?.reward?.xp)
+        assertEquals(2, outcome?.reward?.coins)
+        assertNull(repo.finishDueFocusSession())                       // second call cannot reward again
+        assertEquals(25L, db.scoreEventDao().totalXp())
+        assertEquals(1, db.focusSessionDao().completedCount())
+        assertEquals(25, db.focusSessionDao().totalMinutes())
+        assertEquals(id, db.focusSessionDao().getAll().single().id)
+    }
+
+    @Test fun pausedSessionDoesNotCountPausedTimeAndEarlyFinishIsPartial() = runBlocking {
+        val id = repo.startFocus("Study", null, 1500)!!
+        wall += 600_000; elapsed += 600_000                            // 10 minutes of focus
+        repo.pauseFocus(id)
+        wall += 3_600_000; elapsed += 3_600_000                        // an hour away while paused
+        assertNull(repo.finishDueFocusSession())                       // paused sessions are never "due"
+        repo.resumeFocus(id)
+        wall += 300_000; elapsed += 300_000                            // 5 more minutes
+        val outcome = repo.finishFocus(id)
+        assertEquals(15L, outcome?.focusedMinutes)                     // 10 + 5, not 75
+        assertEquals(15, outcome?.reward?.xp)
+    }
+
+    @Test fun stationSessionsCountOnlyCompletedSessions() = runBlocking {
+        val a = repo.startFocus("A", null, 1500)!!
+        repo.cancelFocus(a)
+        val b = repo.startFocus("B", null, 1500)!!
+        wall += 1500_000; elapsed += 1500_000
+        repo.finishFocus(b)
+        val c = repo.startFocus("C", null, 1500)!!
+        wall += 60_000; elapsed += 60_000
+        repo.finishFocus(c)                                            // under 5 minutes: discarded
+        assertEquals(1, db.focusSessionDao().completedCount())
+    }
 }

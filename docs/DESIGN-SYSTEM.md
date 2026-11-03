@@ -34,7 +34,7 @@ Material roles (`ui/theme/Theme.kt`): `primary` = ProgressBlue (or the equipped 
 | App shell (`AppRoot`) | `AppTopBar`, `AppBottomBar`, solid background | none |
 | Today | **Phase 2 done**: `AppCard`, `PrimaryButton`/`SecondaryButton`, `ProgressRing`, `ProgressBar`, `ArtImage`, `FlameIcon`; stateless `TodayContent` with tests | none |
 | Routine | **Phase 3 done**: timeline schedule, date strip, summary card, category filter chips, status pills, `CategoryIcon`, Customize mode, editor restyled with `AppChip`; stateless `ScheduleView` with tests | none |
-| Focus | `AppCard`, `PrimaryButton` | immersive session view and idle view use their own space palette on purpose; align text colours and chips |
+| Focus | **Phase 4 done**: night-sky backdrop, animated station scene, `IconTile`, `AppChip`, `AppCard`, `PrimaryButton`; stateless `FocusIdleContent` / `FocusRunningContent` with tests | none |
 | Progress | `AppCard`, `BarChart`, `ProgressBar`, `SectionHeader` | Day/Week/Month tabs, achievements list, heatmap colours |
 | Rewards | `AppCard`, tabs via theme chips, gold coin pill | item cards → shared component, buy buttons → `PrimaryButton`, coin pill → badge |
 | App Blocker | `AppCard`, `PrimaryButton` | many raw `Button`/`OutlinedButton` → `PrimaryButton`/`SecondaryButton`; app rows |
@@ -56,3 +56,12 @@ shrink unused icons with R8.
 - Only today's tasks can be ticked; past days are history and future days are plans.
 - Time labels follow the phone's 12/24-hour setting.
 - Filter chips group the six categories: Study = Academic Study, Work = AI Coding + Trading, Health = Fitness, Personal = Walking & Garden, Meal = Meals.
+
+## Focus Mode (Phase 4)
+- Station level comes from completed sessions only (`StationProgress`: Lv. 1-6 at 0, 1, 3, 6, 10, 15 sessions). Each level uses one of the six
+  station pictures; during a running session the pictures cross-fade with the session's progress.
+- The reward preview on the screen uses `ScoringEngine.calculateFocusReward`, the same function that grants the real reward, including the daily cap.
+- Rewards are granted exactly once, from one of: finishing in the app, the planned end being reached while the app is open, the end-of-session
+  alarm, or the next time the app starts (`finishDueFocusSession`). Paused sessions never become due; cancelled and sub-5-minute sessions earn nothing.
+- Distraction Protection text only says what is true: it never claims apps are blocked, and says so when Usage Access is missing.
+- Animations (bobbing station, orbiting satellite, twinkling stars) stop when "Reduce motion" is on.

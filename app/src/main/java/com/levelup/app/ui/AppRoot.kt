@@ -170,7 +170,8 @@ private fun MainScaffold(
     Scaffold(
         containerColor = AppColors.Background,
         topBar = {
-            if (!hideBars) AppTopBar(
+            // Focus Mode draws its own header over the full-screen night sky.
+            if (!hideBars && destination?.route != Dest.FOCUS.route) AppTopBar(
                 title = if (onSettings) subTitle else Dest.entries.firstOrNull { it.route == destination?.route }?.label ?: "Level Up",
                 onBack = if (onSettings) fun() { nav.popBackStack() } else null,
                 actions = {
@@ -206,6 +207,8 @@ private fun MainScaffold(
                     rememberVm { FocusViewModel(container.repository) },
                     onOpenBlocker = { nav.navigate(BLOCKER_ROUTE) { launchSingleTop = true } },
                     onImmersive = { immersive = it },
+                    onOpenSettings = { nav.navigate(SETTINGS_ROUTE) { launchSingleTop = true } },
+                    onOpenProgress = { go(Dest.PROGRESS.route) },
                 )
             }
             composable(Dest.PROGRESS.route) { ProgressScreen(rememberVm { ProgressViewModel(container.repository) }) }

@@ -3,6 +3,9 @@ package com.levelup.app.ui.components
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -80,7 +83,13 @@ fun AppCard(
 
 /** Main action on a screen: solid lavender, off-white label. */
 @Composable
-fun PrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
+fun PrimaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    icon: ImageVector? = null,
+) {
     Button(
         onClick = onClick,
         enabled = enabled,
@@ -92,7 +101,13 @@ fun PrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifi
             disabledContainerColor = AppColors.Elevated,
             disabledContentColor = AppColors.TextSecondary,
         ),
-    ) { Text(text, fontWeight = FontWeight.SemiBold) }
+    ) {
+        if (icon != null) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(22.dp))
+            androidx.compose.foundation.layout.Spacer(Modifier.size(8.dp))
+        }
+        Text(text, fontWeight = FontWeight.SemiBold)
+    }
 }
 
 /** Secondary action: outlined with the subtle border. */
@@ -138,6 +153,68 @@ fun AppChip(
             selectedLabelColor = AppColors.TextPrimary,
         ),
     )
+}
+
+/** Switch with lavender "on" state. */
+@Composable
+fun appSwitchColors() = androidx.compose.material3.SwitchDefaults.colors(
+    checkedThumbColor = AppColors.TextPrimary,
+    checkedTrackColor = AppColors.Lavender,
+    uncheckedThumbColor = AppColors.TextSecondary,
+    uncheckedTrackColor = AppColors.Elevated,
+    uncheckedBorderColor = AppColors.Border,
+)
+
+/** Square icon button with the subtle border, used in screen headers. */
+@Composable
+fun IconTile(icon: ImageVector, description: String, onClick: () -> Unit, modifier: Modifier = Modifier, active: Boolean = false) {
+    val shape = RoundedCornerShape(12.dp)
+    Box(
+        modifier
+            .size(44.dp)
+            .clip(shape)
+            .background(if (active) AppColors.Lavender else AppColors.Card)
+            .border(1.dp, if (active) AppColors.Lavender else AppColors.Border, shape)
+            .clickable(role = androidx.compose.ui.semantics.Role.Button, onClickLabel = description, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { Icon(icon, contentDescription = description, tint = AppColors.TextPrimary, modifier = Modifier.size(22.dp)) }
+}
+
+// ---------------------------------------------------------------- icons
+
+/** Round badge holding a vector icon or a short text/emoji glyph. */
+@Composable
+fun IconBadge(
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+    glyph: String? = null,
+    contentDescription: String? = null,
+    tint: Color = AppColors.TextPrimary,
+    background: Color = AppColors.Elevated,
+    size: Dp = Sizes.badge,
+) {
+    Box(modifier.size(size).background(background, CircleShape), contentAlignment = Alignment.Center) {
+        if (icon != null) Icon(icon, contentDescription = contentDescription, tint = tint, modifier = Modifier.size(size * 0.55f))
+        else if (glyph != null) Text(glyph, color = tint, fontWeight = FontWeight.Bold)
+    }
+}
+
+/** Illustration from [com.levelup.app.ui.theme.Art]. Pass a description only when the picture carries meaning. */
+@Composable
+fun ArtImage(
+    @androidx.annotation.DrawableRes id: Int,
+    modifier: Modifier = Modifier,
+    contentDescription: String? = null,
+    contentScale: ContentScale = ContentScale.Fit,
+    alignment: Alignment = Alignment.Center,
+) {
+    Image(painterResource(id), contentDescription = contentDescription, modifier = modifier, contentScale = contentScale, alignment = alignment)
+}
+
+/** Streak flame illustration. */
+@Composable
+fun FlameIcon(modifier: Modifier = Modifier.size(24.dp)) {
+    Image(painterResource(com.levelup.app.ui.theme.Art.StreakFlame), contentDescription = null, modifier = modifier)
 }
 
 /** Switch with lavender "on" state. */
