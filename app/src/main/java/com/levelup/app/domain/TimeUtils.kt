@@ -28,6 +28,14 @@ object TimeUtils {
         return "%02d:%02d".format(m / 60, m % 60)
     }
 
+    /** Clock text for the user's phone setting: "13:05" or "01:05 PM". */
+    fun formatForDisplay(minuteOfDay: Int, is24Hour: Boolean): String {
+        val m = ((minuteOfDay % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY
+        if (is24Hour) return "%02d:%02d".format(m / 60, m % 60)
+        val hour12 = if (m / 60 % 12 == 0) 12 else m / 60 % 12
+        return "%02d:%02d %s".format(hour12, m % 60, if (m / 60 < 12) "AM" else "PM")
+    }
+
     /** Parses "H:MM" / "HH:MM" into minutes since midnight, or null when invalid. */
     fun parseHhMm(text: String): Int? {
         val parts = text.trim().split(":")

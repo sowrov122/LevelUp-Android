@@ -85,3 +85,17 @@ object LevelTitles {
 
     fun titleFor(level: Int): String = TITLES.lastOrNull { level >= it.first }?.second ?: "Cadet"
 }
+
+/** Filter groups shown on the Routine screen. Every [Category] belongs to exactly one group. */
+enum class CategoryGroup(val label: String) {
+    ALL("All"), STUDY("Study"), WORK("Work"), HEALTH("Health"), PERSONAL("Personal"), MEAL("Meal"),
+}
+
+val Category.group: CategoryGroup
+    get() = when (this) {
+        Category.STUDY -> CategoryGroup.STUDY
+        Category.AI_CODING, Category.TRADING -> CategoryGroup.WORK
+        Category.FITNESS -> CategoryGroup.HEALTH
+        Category.WALKING -> CategoryGroup.PERSONAL
+        Category.MEALS -> CategoryGroup.MEAL
+    }

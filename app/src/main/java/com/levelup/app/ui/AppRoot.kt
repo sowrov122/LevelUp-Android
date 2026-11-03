@@ -6,7 +6,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Checklist
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.PlayArrow
@@ -74,10 +77,10 @@ import kotlinx.coroutines.flow.map
 
 private enum class Dest(val route: String, val label: String, val icon: ImageVector) {
     TODAY("today", "Today", Icons.Filled.Home),
-    ROUTINE("routine", "Routine", Icons.Filled.DateRange),
-    FOCUS("focus", "Focus", Icons.Filled.PlayArrow),
-    PROGRESS("progress", "Progress", Icons.Filled.CheckCircle),
-    REWARDS("rewards", "Rewards", Icons.Filled.Star),
+    ROUTINE("routine", "Routine", Icons.Filled.Checklist),
+    FOCUS("focus", "Focus", Icons.Filled.Timer),
+    PROGRESS("progress", "Progress", Icons.Filled.BarChart),
+    REWARDS("rewards", "Rewards", Icons.Filled.EmojiEvents),
 }
 
 private val NAV_ITEMS = Dest.entries.map { NavItem(it.route, it.label, it.icon) }

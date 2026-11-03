@@ -60,12 +60,16 @@ fun AppCard(
     elevated: Boolean = false,
     shape: Shape = RoundedCornerShape(Radii.card),
     border: BorderStroke? = BorderStroke(1.dp, AppColors.Border),
+    containerColor: Color? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Card(
         modifier = modifier,
         shape = shape,
-        colors = CardDefaults.cardColors(containerColor = if (elevated) AppColors.Elevated else AppColors.Card, contentColor = AppColors.TextPrimary),
+        colors = CardDefaults.cardColors(
+            containerColor = containerColor ?: if (elevated) AppColors.Elevated else AppColors.Card,
+            contentColor = AppColors.TextPrimary,
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         border = border,
         content = content,
@@ -113,11 +117,18 @@ fun LinkButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier)
 // ---------------------------------------------------------------- chips
 
 @Composable
-fun AppChip(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun AppChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+) {
     FilterChip(
         selected = selected,
         onClick = onClick,
         label = { Text(label) },
+        leadingIcon = if (icon != null) ({ Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp)) }) else null,
         modifier = modifier,
         shape = RoundedCornerShape(Radii.chip),
         colors = FilterChipDefaults.filterChipColors(
@@ -128,6 +139,16 @@ fun AppChip(label: String, selected: Boolean, onClick: () -> Unit, modifier: Mod
         ),
     )
 }
+
+/** Switch with lavender "on" state. */
+@Composable
+fun appSwitchColors() = androidx.compose.material3.SwitchDefaults.colors(
+    checkedThumbColor = AppColors.TextPrimary,
+    checkedTrackColor = AppColors.Lavender,
+    uncheckedThumbColor = AppColors.TextSecondary,
+    uncheckedTrackColor = AppColors.Elevated,
+    uncheckedBorderColor = AppColors.Border,
+)
 
 // ---------------------------------------------------------------- icons
 

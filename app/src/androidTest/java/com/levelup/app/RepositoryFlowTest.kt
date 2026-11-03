@@ -98,4 +98,45 @@ class RepositoryFlowTest {
         repo.cancelFocus(id2)
         assertEquals(25L, db.scoreEventDao().totalXp()) // unchanged
     }
+
+    private fun timed(title: String, startH: Int, id: String? = null) = TaskDraft(
+        id = id, title = title, startMinute = startH * 60, endMinute = startH * 60 + 60,
+        repeatDaysMask = TimeUtils.ALL_DAYS, reminderOffsetMinutes = null,
+    )
+
+    @Test fun orderingByHandAndByTimeAndChronologicalDay() = runBlocking {
+        repo.saveTask(timed("Late", 12))
+        repo.saveTask(timed("Early", 8))
+        repo.saveTask(timed("Middle", 10))
+        suspend fun titles() = db.routineTaskDao().getAll().map { it.title }
+
+        assertEquals(listOf("Late", "Early", "Middle"), titles())          // creation order
+        val middle = db.routineTaskDao().getAll().first { it.title == "Middle" }
+        repo.moveTask(middle.id, -1)
+        assertEquals(listOf("Late", "Middle", "Early"), titles())          // manual reorder
+        repo.sortTasksByTime()
+        assertEquals(listOf("Early", "Middle", "Late"), titles())          // sorted by time
+
+        // the daily timeline is chronological regardless of the manual order
+        val today = repo.today().toString()
+        assertEquals(listOf("Early", "Middle", "Late"), db.taskInstanceDao().getForDate(today).map { it.title })
+    }
+
+    @Test fun editingATaskMovesItsPendingInstanceAndKeepsRemindersOptional() = runBlocking {
+        repo.saveTask(timed("Study", 9))
+        val task = db.routineTaskDao().getAll().single()
+        repo.saveTask(timed("Study", 14, task.id).copy(reminderOffsetMinutes = 10))
+        val today = repo.today().toString()
+        val instance = db.taskInstanceDao().getForDate(today).single()
+        assertEquals(14 * 60, instance.startMinute)
+        assertEquals(10, db.routineTaskDao().get(task.id)?.reminderOffsetMinutes)
+    }
+
+    @Test fun deletingATaskRemovesItsPendingInstance() = runBlocking {
+        repo.saveTask(timed("Temp", 9))
+        val task = db.routineTaskDao().getAll().single()
+        repo.deleteTask(task.id)
+        assertEquals(0, db.routineTaskDao().count())
+        assertEquals(0, db.taskInstanceDao().getForDate(repo.today().toString()).size)
+    }
 }

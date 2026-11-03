@@ -73,6 +73,7 @@ data class TaskRowUi(
     val priority: Priority,
     val pointsAwarded: Int,
     val xpReward: Int = 0,
+    val startMinute: Int = 0,
 )
 
 data class TodayUiState(
@@ -186,6 +187,9 @@ data class RoutineDayUi(
     /** Only today can be ticked: past days are history, future days are plans. */
     val canToggle: Boolean = false,
     val loading: Boolean = true,
+    /** Points earned on the selected day and the current streak, both from saved data. */
+    val points: Int = 0,
+    val streak: Int = 0,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -199,7 +203,7 @@ class RoutineViewModel(private val repo: LevelUpRepository) : ViewModel() {
                 if (!sel.isBefore(today)) repo.ensureDay(sel)
                 emit(Unit)
             }.flatMapLatest {
-                combine(repo.observeInstances(sel), ticker(30_000)) { instances, now ->
+                combine(repo.observeInstances(sel), ticker(30_000), repo.observePointsOn(sel), repo.observeSummaries()) { instances, now, points, summaries ->
                     val rows = instances.map { i ->
                         val done = i.status == TaskStatus.COMPLETED
                         TaskRowUi(
@@ -215,6 +219,7 @@ class RoutineViewModel(private val repo: LevelUpRepository) : ViewModel() {
                             inProgress = sel == today && !done && now >= i.scheduledStart && now < i.scheduledEnd,
                             priority = i.priority, pointsAwarded = i.pointsAwarded,
                             xpReward = ScoringEngine.calculateTaskReward(i.durationMinutes).xp,
+                            startMinute = i.startMinute,
                         )
                     }
                     val monday = sel.minusDays((sel.dayOfWeek.value - 1).toLong())
@@ -222,12 +227,14 @@ class RoutineViewModel(private val repo: LevelUpRepository) : ViewModel() {
                         today = today, selected = sel, weekDays = (0L..6L).map { monday.plusDays(it) },
                         rows = rows, completed = rows.count { it.status == TaskStatus.COMPLETED }, total = rows.size,
                         canToggle = sel == today, loading = false,
+                        points = points, streak = ScoringEngine.calculateStreaks(summaries, today).current,
                     )
                 }
             }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), RoutineDayUi())
 
     fun selectDate(date: LocalDate) { selected.value = date }
+    fun sortByTime() { viewModelScope.launch { repo.sortTasksByTime() } }
     fun setCompleted(instanceId: String, done: Boolean) { viewModelScope.launch { repo.setCompleted(instanceId, done) } }
 
     val state: StateFlow<RoutineUiState> = repo.observeTasks().map { tasks ->

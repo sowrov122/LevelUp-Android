@@ -33,7 +33,7 @@ Material roles (`ui/theme/Theme.kt`): `primary` = ProgressBlue (or the equipped 
 |---|---|---|
 | App shell (`AppRoot`) | `AppTopBar`, `AppBottomBar`, solid background | none |
 | Today | **Phase 2 done**: `AppCard`, `PrimaryButton`/`SecondaryButton`, `ProgressRing`, `ProgressBar`, `ArtImage`, `FlameIcon`; stateless `TodayContent` with tests | none |
-| Routine | `AppCard`; chips inherit lavender selection from theme | date strip uses raw `clickable` boxes → `AppChip`-style; mode toggle → `AppChip`; editor dialog fields |
+| Routine | **Phase 3 done**: timeline schedule, date strip, summary card, category filter chips, status pills, `CategoryIcon`, Customize mode, editor restyled with `AppChip`; stateless `ScheduleView` with tests | none |
 | Focus | `AppCard`, `PrimaryButton` | immersive session view and idle view use their own space palette on purpose; align text colours and chips |
 | Progress | `AppCard`, `BarChart`, `ProgressBar`, `SectionHeader` | Day/Week/Month tabs, achievements list, heatmap colours |
 | Rewards | `AppCard`, tabs via theme chips, gold coin pill | item cards → shared component, buy buttons → `PrimaryButton`, coin pill → badge |
@@ -44,3 +44,15 @@ Material roles (`ui/theme/Theme.kt`): `primary` = ProgressBlue (or the equipped 
 | Dialogs | `ConfirmDialog` restyled; other `AlertDialog`s pick up Elevated container from the theme | editor and explanation dialogs: shared dialog component |
 
 Purchasable themes were re-based on the new palette: the free default is "Twilight" (ProgressBlue); Ember, Moonlit and Forest are optional accents.
+
+## Icons
+Phase 3 added `androidx.compose.material:material-icons-extended` (same Compose family, version managed by the BOM) so category
+and navigation icons (book, laptop, dumbbell, leaf, restaurant, checklist, timer, chart, trophy) match the reference. Release builds
+shrink unused icons with R8.
+
+## Routine screen decisions
+- Daily view is always chronological by start time. Manual order (Customize → move up/down) is the order of the editable routine list;
+  "Sort list by time" rewrites it chronologically.
+- Only today's tasks can be ticked; past days are history and future days are plans.
+- Time labels follow the phone's 12/24-hour setting.
+- Filter chips group the six categories: Study = Academic Study, Work = AI Coding + Trading, Health = Fitness, Personal = Walking & Garden, Meal = Meals.

@@ -214,6 +214,14 @@ class LevelUpRepository(
         }
     }
 
+    /** Rewrites the manual order so tasks run from earliest to latest start time (ties keep their order). */
+    suspend fun sortTasksByTime() {
+        db.withTransaction {
+            val sorted = taskDao.getAll().sortedWith(compareBy({ it.startMinute }, { it.sortOrder }))
+            taskDao.upsertAll(sorted.mapIndexed { i, t -> t.copy(sortOrder = i) })
+        }
+    }
+
     suspend fun duplicateTask(taskId: String) {
         val t = taskDao.get(taskId) ?: return
         val now = nowMillis()
