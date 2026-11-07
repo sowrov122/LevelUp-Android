@@ -6,7 +6,8 @@ import java.time.LocalDate
  * Pure, deterministic scoring rules. No Android, no clock, no floating point for points or coins.
  */
 object ScoringEngine {
-    const val MIN_FOCUS_SECONDS = 300L          // sessions shorter than 5 minutes earn nothing
+    const val MIN_FOCUS_SECONDS = 600L          // sessions shorter than 10 minutes earn nothing
+    const val MIN_FOCUS_MINUTES = 10
     const val MAX_LEVEL = 500_000_000           // keeps cumulative XP inside Long
     const val STREAK_THRESHOLD_PERCENT = 70
 

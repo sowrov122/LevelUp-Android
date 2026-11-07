@@ -12,6 +12,8 @@ object AppColors {
     val Border = Color(0xFF4A372A)         // subtle card/outline colour
     val Lavender = Color(0xFF62567D)       // primary accent: selected states, primary buttons
     val LavenderSoft = Color(0xFF3B3350)   // Card tinted with lavender: the active task
+    val FocusViolet = Color(0xFF8266C8)    // brighter violet used only on the Focus Mode screen (buttons, chips, ring)
+    val HeatHigh = Color(0xFF9A86C9)       // top heat-map level
     val ProgressBlue = Color(0xFF91B8F0)   // progress accent: bars, rings, links
     val RewardGold = Color(0xFFFFD000)     // coins and rewards only
     val TextPrimary = Color(0xFFF5EBDD)    // main text

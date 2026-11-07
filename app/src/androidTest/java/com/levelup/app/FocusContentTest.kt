@@ -61,15 +61,15 @@ class FocusContentTest {
         assertTrue(started)
     }
 
-    @Test fun stationCardReflectsRealSessionsAndRewardPreview() {
+    @Test fun stationCardReflectsRealFocusedMinutesAndRewardPreview() {
         showIdle()
         compose.onNodeWithTag("station_level").performScrollTo()
         compose.onNodeWithTag("station_level").assertIsDisplayed()
-        compose.onNodeWithText("Lv. 4").assertIsDisplayed()                 // 6 sessions = level 4
-        compose.onNodeWithText("6 / 10 Sessions").assertIsDisplayed()
+        compose.onNodeWithText("Lv. 5").assertIsDisplayed()                 // 150 focused minutes = level 5
+        compose.onNodeWithText("150 / 160 min").assertIsDisplayed()
         compose.onNodeWithText("+25 XP").assertIsDisplayed()
         compose.onNodeWithText("+25 min").assertIsDisplayed()
-        compose.onNodeWithText("+25%").assertIsDisplayed()
+        compose.onNodeWithText("+41%").assertIsDisplayed()                  // 25 of the 60 minutes between level 5 and 6
     }
 
     @Test fun rewardNoteWarnsWhenTheDailyCapIsReached() {

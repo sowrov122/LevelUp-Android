@@ -84,6 +84,12 @@ interface TaskInstanceDao {
     @Query("SELECT COUNT(*) FROM task_instances WHERE status = 'COMPLETED'")
     suspend fun completedCount(): Int
 
+    @Query("SELECT COUNT(*) FROM task_instances WHERE status = 'COMPLETED'")
+    fun observeCompletedCount(): Flow<Int>
+
+    @Query("SELECT COALESCE(SUM(durationMinutes), 0) FROM task_instances WHERE status = 'COMPLETED' AND category = 'STUDY'")
+    fun observeStudyMinutes(): Flow<Int>
+
     @Query("SELECT COALESCE(SUM(durationMinutes), 0) FROM task_instances WHERE status = 'COMPLETED' AND category = 'STUDY'")
     suspend fun studyMinutes(): Int
 }
@@ -171,6 +177,21 @@ interface FocusSessionDao {
 
     @Query("SELECT COALESCE(SUM(rewardedMinutes), 0) FROM focus_sessions WHERE localDate = :date AND status = 'COMPLETED'")
     fun observeRewardedMinutesOn(date: String): Flow<Int>
+
+    @Query(
+        "SELECT localDate AS k, COALESCE(SUM(accumulatedSeconds), 0) / 60 AS v FROM focus_sessions " +
+            "WHERE status = 'COMPLETED' AND localDate >= :fromDate GROUP BY localDate"
+    )
+    fun observeFocusMinutesByDay(fromDate: String): Flow<List<KeyValue>>
+
+    @Query(
+        "SELECT localDate AS k, COUNT(*) AS v FROM focus_sessions " +
+            "WHERE status = 'COMPLETED' AND localDate >= :fromDate GROUP BY localDate"
+    )
+    fun observeFocusSessionsByDay(fromDate: String): Flow<List<KeyValue>>
+
+    @Query("SELECT COALESCE(MAX(c), 0) FROM (SELECT COUNT(*) AS c FROM focus_sessions WHERE status = 'COMPLETED' GROUP BY localDate)")
+    fun observeMaxCompletedInOneDay(): Flow<Int>
 
     @Query("SELECT * FROM focus_sessions WHERE status = 'COMPLETED' ORDER BY endedAt DESC LIMIT :limit")
     fun observeRecentCompleted(limit: Int): Flow<List<FocusSessionEntity>>

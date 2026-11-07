@@ -99,3 +99,6 @@ val Category.group: CategoryGroup
         Category.WALKING -> CategoryGroup.PERSONAL
         Category.MEALS -> CategoryGroup.MEAL
     }
+
+/** Completed focus minutes and sessions on one local date. */
+data class FocusDay(val minutes: Int, val sessions: Int)

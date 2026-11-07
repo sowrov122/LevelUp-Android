@@ -8,6 +8,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.levelup.app.data.LevelUpDatabase
 import com.levelup.app.data.LevelUpRepository
 import com.levelup.app.data.SettingsStore
+import com.levelup.app.domain.Achievements
 import com.levelup.app.domain.TaskDraft
 import com.levelup.app.domain.TaskStatus
 import com.levelup.app.domain.TimeUtils
@@ -26,6 +27,7 @@ import org.junit.runner.RunWith
 class RepositoryFlowTest {
     private lateinit var db: LevelUpDatabase
     private lateinit var repo: LevelUpRepository
+    private val firstFocusXp = Achievements.byId("first_focus")!!.xp.toLong()
     private var wall = 1_700_000_000_000L
     private var elapsed = 1_000_000L
 
@@ -58,7 +60,7 @@ class RepositoryFlowTest {
         repo.setCompleted(instance.id, true)   // redo
 
         // 60 min task = 10 XP, plus the "every task done" bonus = 30 XP. Never doubled.
-        assertEquals(40L, db.scoreEventDao().totalXp())
+        assertEquals(40L + Achievements.byId("first_task")!!.xp, db.scoreEventDao().totalXp())
         // complete(task+bonus) + undo(task+bonus) + redo(task+bonus) = 6 rows, plus the one-time
         // "First Step" achievement coin event = 7 visible ledger rows. Nothing was overwritten.
         assertEquals(7, db.scoreEventDao().getAll().size)
@@ -91,12 +93,12 @@ class RepositoryFlowTest {
         val first = repo.finishFocus(id)
         assertEquals(25, first?.reward?.xp)
         assertNull(repo.finishFocus(id)) // cannot reward twice
-        assertEquals(25L, db.scoreEventDao().totalXp())
+        assertEquals(25L + firstFocusXp, db.scoreEventDao().totalXp())
 
         val id2 = repo.startFocus("Abandoned", null, 1500)!!
         wall += 600_000; elapsed += 600_000
         repo.cancelFocus(id2)
-        assertEquals(25L, db.scoreEventDao().totalXp()) // unchanged
+        assertEquals(25L + firstFocusXp, db.scoreEventDao().totalXp()) // unchanged
     }
 
     private fun timed(title: String, startH: Int, id: String? = null) = TaskDraft(
@@ -150,7 +152,7 @@ class RepositoryFlowTest {
         assertEquals(25, outcome?.reward?.xp)
         assertEquals(2, outcome?.reward?.coins)
         assertNull(repo.finishDueFocusSession())                       // second call cannot reward again
-        assertEquals(25L, db.scoreEventDao().totalXp())
+        assertEquals(25L + firstFocusXp, db.scoreEventDao().totalXp())
         assertEquals(1, db.focusSessionDao().completedCount())
         assertEquals(25, db.focusSessionDao().totalMinutes())
         assertEquals(id, db.focusSessionDao().getAll().single().id)
@@ -177,7 +179,7 @@ class RepositoryFlowTest {
         repo.finishFocus(b)
         val c = repo.startFocus("C", null, 1500)!!
         wall += 60_000; elapsed += 60_000
-        repo.finishFocus(c)                                            // under 5 minutes: discarded
+        repo.finishFocus(c)                                            // under 10 minutes: discarded
         assertEquals(1, db.focusSessionDao().completedCount())
     }
 }

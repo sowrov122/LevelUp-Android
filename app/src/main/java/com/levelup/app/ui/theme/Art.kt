@@ -7,6 +7,7 @@ import com.levelup.app.R
 object Art {
     @DrawableRes val SplashBackground = R.drawable.splash_bg
     @DrawableRes val HeroObservatory = R.drawable.hero_observatory
+    @DrawableRes val FocusBackground = R.drawable.focus_bg
     @DrawableRes val LogoRocket = R.drawable.logo_rocket
     @DrawableRes val AvatarAstronaut = R.drawable.avatar_astronaut
 

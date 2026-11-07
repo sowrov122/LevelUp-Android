@@ -3,6 +3,7 @@ package com.levelup.app.data
 import android.os.SystemClock
 import androidx.room.withTransaction
 import com.levelup.app.domain.Achievements
+import com.levelup.app.domain.FocusDay
 import com.levelup.app.domain.Category
 import com.levelup.app.domain.DaySummary
 import com.levelup.app.domain.DayTaskFlag
@@ -320,6 +321,7 @@ class LevelUpRepository(
             longestStreak = ScoringEngine.calculateStreaks(summaries, today).longest,
             level = ScoringEngine.calculateLevelFromXp(scoreDao.totalXp()).level,
             studyMinutes = instanceDao.studyMinutes(),
+            totalXp = scoreDao.totalXp(),
         )
         val already = achievementDao.ids().toSet()
         for (id in Achievements.unlocked(stats) - already) {
@@ -332,7 +334,7 @@ class LevelUpRepository(
                     referenceId = "ach:$id",
                     localDate = today.toString(),
                     pointsDelta = 0,
-                    xpDelta = 0,
+                    xpDelta = def.xp,
                     coinsDelta = def.coins,
                     occurredAt = now,
                     idempotencyKey = "ach:$id",
@@ -371,6 +373,37 @@ class LevelUpRepository(
         combine(focusDao.observeCompletedCount(), focusDao.observeTotalMinutes()) { s, m -> s to m }
 
     fun observeAchievements(): Flow<List<AchievementEntity>> = achievementDao.observeAll()
+
+    /** Completed-session minutes and counts per local date, from [from] onwards. */
+    fun observeFocusByDay(from: LocalDate): Flow<Map<LocalDate, FocusDay>> =
+        combine(focusDao.observeFocusMinutesByDay(from.toString()), focusDao.observeFocusSessionsByDay(from.toString())) { minutes, sessions ->
+            val m = minutes.associate { LocalDate.parse(it.k) to it.v }
+            val s = sessions.associate { LocalDate.parse(it.k) to it.v }
+            (m.keys + s.keys).associateWith { FocusDay(m[it] ?: 0, s[it] ?: 0) }
+        }
+
+    /** Everything the achievement cards need, recomputed whenever tasks, focus sessions or the ledger change. */
+    fun observeLifetimeStats(): Flow<LifetimeStats> {
+        val tasks = combine(instanceDao.observeCompletedCount(), instanceDao.observeStudyMinutes(), observeSummaries()) { done, study, days ->
+            Triple(done, study, days)
+        }
+        val focus = combine(focusDao.observeCompletedCount(), focusDao.observeTotalMinutes(), focusDao.observeMaxCompletedInOneDay()) { n, m, perDay ->
+            Triple(n, m, perDay)
+        }
+        return combine(tasks, focus, scoreDao.observeTotalXp()) { (done, study, days), (sessions, minutes, perDay), xp ->
+            LifetimeStats(
+                completedTasks = done,
+                perfectDays = days.count { it.total > 0 && it.completed == it.total },
+                focusSessions = sessions,
+                totalFocusMinutes = minutes,
+                maxFocusSessionsInDay = perDay,
+                longestStreak = ScoringEngine.calculateStreaks(days, LocalDate.ofEpochDay(0)).longest,
+                level = ScoringEngine.calculateLevelFromXp(xp).level,
+                studyMinutes = study,
+                totalXp = xp,
+            )
+        }
+    }
     fun observeOwnedIds(): Flow<Set<String>> = ownedDao.observeAll().map { list -> list.map { it.rewardItemId }.toSet() }
 
     // ------------------------------------------------------------------ focus
@@ -404,7 +437,7 @@ class LevelUpRepository(
                     id = id,
                     title = title.trim().ifBlank { "Focus session" },
                     category = category,
-                    plannedSeconds = plannedSeconds.coerceAtLeast(60),
+                    plannedSeconds = plannedSeconds.coerceAtLeast(ScoringEngine.MIN_FOCUS_SECONDS),
                     startedAt = now,
                     endedAt = null,
                     accumulatedSeconds = 0,
@@ -422,7 +455,7 @@ class LevelUpRepository(
                 ),
             )
             id
-        }.also { id -> if (id != null) reminders.scheduleFocusEnd(nowMillis() + plannedSeconds.coerceAtLeast(60) * 1000) }
+        }.also { id -> if (id != null) reminders.scheduleFocusEnd(nowMillis() + plannedSeconds.coerceAtLeast(ScoringEngine.MIN_FOCUS_SECONDS) * 1000) }
     }
 
     suspend fun pauseFocus(id: String) {
@@ -453,7 +486,7 @@ class LevelUpRepository(
         if (remainingSeconds > 0) reminders.scheduleFocusEnd(nowMillis() + remainingSeconds * 1000)
     }
 
-    /** Sessions shorter than 5 minutes are discarded without reward. Rewards are granted exactly once. */
+    /** Sessions shorter than 10 minutes are discarded without reward. Rewards are granted exactly once. */
     suspend fun finishFocus(id: String): FocusOutcome? {
         val outcome = finishFocusInternal(id)
         if (outcome != null) reminders.cancelFocusEnd()

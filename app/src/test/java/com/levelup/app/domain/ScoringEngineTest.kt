@@ -61,7 +61,8 @@ class ScoringEngineTest {
     }
 
     @Test fun focusRewardCapsAndMinimums() {
-        assertEquals(Reward.ZERO, ScoringEngine.calculateFocusReward(299, 120, 0).reward)
+        assertEquals(Reward.ZERO, ScoringEngine.calculateFocusReward(599, 120, 0).reward)      // under 10 minutes
+        assertEquals(Reward(2, 10, 1), ScoringEngine.calculateFocusReward(600, 120, 0).reward)   // exactly 10 minutes
         val r = ScoringEngine.calculateFocusReward(25 * 60L, 120, 0)
         assertEquals(Reward(points = 5, xp = 25, coins = 2), r.reward)
         val capped = ScoringEngine.calculateFocusReward(60 * 60L, 120, 100)

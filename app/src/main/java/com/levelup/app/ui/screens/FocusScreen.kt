@@ -73,10 +73,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
@@ -124,8 +124,7 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 
-private val SpaceGradient = Brush.verticalGradient(listOf(Color(0xFF241638), Color(0xFF1A1028), Color(0xFF140E0A)))
-private val RingBlue = AppColors.ProgressBlue
+private val RingViolet = AppColors.FocusViolet
 
 // ============================================================ entry point
 
@@ -234,7 +233,7 @@ fun FocusIdleContent(
     onDismissOutcome: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(modifier.fillMaxSize().background(SpaceGradient)) {
+    Box(modifier.fillMaxSize().background(AppColors.Background)) {
         CosmicBackdrop(state.reducedMotion, Modifier.fillMaxSize())
         Column(
             Modifier.fillMaxSize().systemBarsPadding().verticalScroll(rememberScrollState()).testTag("focus_idle")
@@ -244,7 +243,7 @@ fun FocusIdleContent(
             FocusHeader(onOpenProgress, onOpenHistory, onOpenSettings)
 
             FocusScene(
-                stageIndex = StationProgress.stageIndex(state.sessions),
+                stageIndex = Art.StationStages.lastIndex,   // before a session the station is shown complete
                 ringFraction = (minutes / 120f).coerceIn(0.04f, 1f),
                 ringDescription = "Selected focus length $minutes minutes",
                 owned = state.owned,
@@ -267,12 +266,12 @@ fun FocusIdleContent(
             }
 
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {
-                listOf(15, 25, 45, 60).forEach { m -> AppChip("$m min", minutes == m, { onMinutes(m) }) }
+                listOf(15, 25, 45, 60).forEach { m -> AppChip("$m min", minutes == m, { onMinutes(m) }, selectedColor = AppColors.FocusViolet) }
             }
 
-            PrimaryButton("Start Focus", onStart, Modifier.fillMaxWidth().testTag("start_focus"), icon = Icons.Filled.PlayArrow)
+            PrimaryButton("Start Focus", onStart, Modifier.fillMaxWidth().testTag("start_focus"), icon = Icons.Filled.PlayArrow, containerColor = AppColors.FocusViolet)
 
-            state.lastOutcome?.let { OutcomeCard(it, state.sessions, onDismissOutcome) }
+            state.lastOutcome?.let { OutcomeCard(it, state.minutes, onDismissOutcome) }
 
             ProtectionCard(state, usageAccess, onProtection, onOpenBlocker)
 
@@ -378,15 +377,15 @@ private fun TitlePill(title: String, onTitle: (String) -> Unit) {
 }
 
 @Composable
-private fun OutcomeCard(o: com.levelup.app.domain.FocusOutcome, sessions: Int, onDismiss: () -> Unit) {
+private fun OutcomeCard(o: com.levelup.app.domain.FocusOutcome, totalMinutes: Int, onDismiss: () -> Unit) {
     AppCard(Modifier.fillMaxWidth(), elevated = true) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             if (o.completed) {
                 Text("Session complete", style = MaterialTheme.typography.titleMedium, color = AppColors.Success, fontWeight = FontWeight.SemiBold)
                 Text("${o.focusedMinutes} min focused · +${o.reward.points} points · +${o.reward.xp} XP · +${o.reward.coins} coins", color = AppColors.TextPrimary)
-                val next = StationProgress.nextThreshold(sessions)
+                val next = StationProgress.nextThreshold(totalMinutes)
                 Text(
-                    if (next != null) "Station: $sessions / $next sessions to Lv. ${StationProgress.level(sessions) + 1}" else "Station: maximum level reached",
+                    if (next != null) "Station: $totalMinutes / $next min to Lv. ${StationProgress.level(totalMinutes) + 1}" else "Station: maximum level reached",
                     style = MaterialTheme.typography.bodySmall,
                     color = AppColors.TextSecondary,
                 )
@@ -395,7 +394,7 @@ private fun OutcomeCard(o: com.levelup.app.domain.FocusOutcome, sessions: Int, o
                 }
             } else {
                 Text("Session too short", style = MaterialTheme.typography.titleMedium, color = AppColors.TextPrimary)
-                Text("Sessions under 5 minutes are not rewarded.", color = AppColors.TextSecondary)
+                Text("Sessions under ${ScoringEngine.MIN_FOCUS_MINUTES} minutes are not rewarded.", color = AppColors.TextSecondary)
             }
             TextButton(onClick = onDismiss) { Text("Dismiss", color = AppColors.ProgressBlue) }
         }
@@ -430,15 +429,15 @@ private fun ProtectionCard(state: FocusUiState, usageAccess: Boolean, onProtecti
 
 @Composable
 private fun StationMilestoneCard(state: FocusUiState, minutes: Int) {
-    val sessions = state.sessions
-    val level = StationProgress.level(sessions)
-    val next = StationProgress.nextThreshold(sessions)
+    val totalMinutes = state.minutes
+    val level = StationProgress.level(totalMinutes)
+    val next = StationProgress.nextThreshold(totalMinutes)
     val preview = ScoringEngine.calculateFocusReward(minutes * 60L, state.dailyCapMinutes, state.rewardedMinutesToday)
     AppCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Image(
-                    painterResource(Art.StationStages[StationProgress.stageIndex(sessions)]),
+                    painterResource(Art.StationStages[StationProgress.stageIndex(totalMinutes)]),
                     contentDescription = null,
                     modifier = Modifier.size(64.dp).clip(CircleShape).background(AppColors.Elevated).border(2.dp, AppColors.Lavender, CircleShape),
                 )
@@ -451,10 +450,10 @@ private fun StationMilestoneCard(state: FocusUiState, minutes: Int) {
                             modifier = Modifier.clip(RoundedCornerShape(50)).background(AppColors.Lavender).padding(horizontal = 10.dp, vertical = 3.dp).testTag("station_level"),
                         )
                     }
-                    Text("Complete focus sessions to upgrade your station", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
-                    ProgressBar(StationProgress.fractionToNext(sessions), height = 8.dp)
+                    Text("Every focused minute upgrades your station", style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
+                    ProgressBar(StationProgress.fractionToNext(totalMinutes), height = 8.dp)
                     Text(
-                        if (next != null) "$sessions / $next Sessions" else "$sessions Sessions · max level",
+                        if (next != null) "$totalMinutes / $next min" else "$totalMinutes min · max level",
                         style = MaterialTheme.typography.labelMedium,
                         color = AppColors.TextSecondary,
                         modifier = Modifier.testTag("station_sessions"),
@@ -466,10 +465,10 @@ private fun StationMilestoneCard(state: FocusUiState, minutes: Int) {
                 PreviewStat(Modifier.weight(1f), { Icon(Icons.Filled.Star, null, tint = AppColors.RewardGold, modifier = Modifier.size(22.dp)) }, "+${preview.reward.xp} XP", "Per session")
                 PreviewStat(Modifier.weight(1f), { Image(painterResource(Art.Coin), null, Modifier.size(24.dp)) }, "+${preview.reward.coins} Coins", "Per session")
                 PreviewStat(Modifier.weight(1f), { Icon(Icons.Filled.Schedule, null, tint = AppColors.TextSecondary, modifier = Modifier.size(22.dp)) }, "+$minutes min", "Focus time")
-                PreviewStat(Modifier.weight(1f), { Icon(Icons.Filled.BarChart, null, tint = AppColors.ProgressBlue, modifier = Modifier.size(22.dp)) }, "+${StationProgress.percentPerSession(sessions)}%", "Station")
+                PreviewStat(Modifier.weight(1f), { Icon(Icons.Filled.BarChart, null, tint = AppColors.ProgressBlue, modifier = Modifier.size(22.dp)) }, "+${StationProgress.percentForSession(totalMinutes, minutes)}%", "Station")
             }
             val note = when {
-                minutes * 60L < ScoringEngine.MIN_FOCUS_SECONDS -> "Sessions under 5 minutes earn nothing."
+                minutes * 60L < ScoringEngine.MIN_FOCUS_SECONDS -> "Sessions under ${ScoringEngine.MIN_FOCUS_MINUTES} minutes earn nothing."
                 preview.rewardedMinutes < minutes ->
                     if (preview.rewardedMinutes == 0) "Daily reward cap reached: this session would earn nothing." else "Daily reward cap: only ${preview.rewardedMinutes} min would be rewarded."
                 else -> null
@@ -506,7 +505,7 @@ fun FocusRunningContent(
     val progress = if (active.plannedSeconds <= 0) 0f else (active.elapsedSeconds.toFloat() / active.plannedSeconds).coerceIn(0f, 1f)
     val status = ProtectionStatus.state(state.protectionOn, usageAccess, state.strictMode)
 
-    Box(modifier.fillMaxSize().background(SpaceGradient)) {
+    Box(modifier.fillMaxSize().background(AppColors.Background)) {
         CosmicBackdrop(state.reducedMotion, Modifier.fillMaxSize())
         Column(
             Modifier.fillMaxSize().systemBarsPadding().padding(16.dp).testTag("focus_running"),
@@ -515,7 +514,7 @@ fun FocusRunningContent(
             Text(active.title, style = MaterialTheme.typography.titleMedium, color = AppColors.TextPrimary, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
             if (category != null) Text(category.label, style = MaterialTheme.typography.bodySmall, color = AppColors.TextSecondary)
             FocusScene(
-                stageIndex = Art.stationStageIndex(progress),
+                stageIndex = StationProgress.runningStageIndex(state.minutes, active.elapsedSeconds),
                 ringFraction = progress,
                 ringDescription = "Session ${(progress * 100).toInt()} percent complete",
                 owned = state.owned,
@@ -571,7 +570,7 @@ fun FocusRunningContent(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         if (canCollect) "Finish now to collect rewards for the minutes you focused, or give up and earn nothing."
-                        else "Less than 5 minutes are done, so finishing now earns nothing. Keep going or give up.",
+                        else "Less than ${ScoringEngine.MIN_FOCUS_MINUTES} minutes are done, so finishing now earns nothing. Keep going or give up.",
                     )
                     TextButton(onClick = { showEnd = false; onCancel() }) { Text("Give up (no reward)", color = AppColors.Danger) }
                 }
@@ -609,12 +608,12 @@ private fun CustomMinutesDialog(current: Int, onDismiss: () -> Unit, onSet: (Int
         text = {
             OutlinedTextField(
                 text, { text = it.filter(Char::isDigit).take(3) },
-                label = { Text("Minutes (1–180)") }, singleLine = true,
+                label = { Text("Minutes (${ScoringEngine.MIN_FOCUS_MINUTES}–180)") }, singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                isError = value == null || value !in 1..180,
+                isError = value == null || value !in ScoringEngine.MIN_FOCUS_MINUTES..180,
             )
         },
-        confirmButton = { TextButton(onClick = { value?.let(onSet) }, enabled = value != null && value in 1..180) { Text("Set", color = AppColors.ProgressBlue) } },
+        confirmButton = { TextButton(onClick = { value?.let(onSet) }, enabled = value != null && value in ScoringEngine.MIN_FOCUS_MINUTES..180) { Text("Set", color = AppColors.ProgressBlue) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = AppColors.TextSecondary) } },
     )
 }
@@ -663,33 +662,30 @@ private fun sceneMotion(reduced: Boolean): Pair<Float, Float> {
     }
 }
 
-/** Full-screen night sky: gradient comes from the parent, this draws twinkling stars and distant mountains. */
+/** Full-screen night sky: the supplied artwork plus a light layer of twinkling stars. */
 @Composable
 private fun CosmicBackdrop(reducedMotion: Boolean, modifier: Modifier = Modifier) {
     val twinkle = if (reducedMotion) 1f else {
-        rememberInfiniteTransition(label = "stars").animateFloat(0.45f, 1f, infiniteRepeatable(tween(2600, easing = LinearEasing), RepeatMode.Reverse), label = "twinkle").value
+        rememberInfiniteTransition(label = "stars").animateFloat(0.4f, 1f, infiniteRepeatable(tween(2600, easing = LinearEasing), RepeatMode.Reverse), label = "twinkle").value
     }
     val stars = remember {
         val r = java.util.Random(5L)
-        List(90) { floatArrayOf(r.nextFloat(), r.nextFloat() * 0.8f, 0.6f + r.nextFloat() * 1.4f) }
+        List(34) { floatArrayOf(r.nextFloat(), r.nextFloat() * 0.7f, 0.5f + r.nextFloat() * 1.1f) }
     }
-    Canvas(modifier) {
-        val w = size.width
-        val h = size.height
-        stars.forEachIndexed { i, s ->
-            val a = (if (i % 3 == 0) twinkle else if (i % 3 == 1) 1.4f - twinkle else 0.8f).coerceIn(0.2f, 1f)
-            drawCircle(Color.White.copy(alpha = a * 0.8f), radius = s[2] * density, center = Offset(s[0] * w, s[1] * h))
+    Box(modifier) {
+        Image(
+            painterResource(Art.FocusBackground),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop,
+            alignment = Alignment.TopCenter,
+        )
+        Canvas(Modifier.fillMaxSize()) {
+            stars.forEachIndexed { i, s ->
+                val a = (if (i % 2 == 0) twinkle else 1.4f - twinkle).coerceIn(0.15f, 1f)
+                drawCircle(Color.White.copy(alpha = a * 0.7f), radius = s[2] * density, center = Offset(s[0] * size.width, s[1] * size.height))
+            }
         }
-        val back = Path().apply {
-            moveTo(0f, h * 0.64f); lineTo(w * 0.15f, h * 0.55f); lineTo(w * 0.3f, h * 0.62f); lineTo(w * 0.5f, h * 0.5f)
-            lineTo(w * 0.7f, h * 0.6f); lineTo(w * 0.85f, h * 0.53f); lineTo(w, h * 0.6f); lineTo(w, h); lineTo(0f, h); close()
-        }
-        drawPath(back, Color(0xFF2A1B3F).copy(alpha = 0.55f))
-        val front = Path().apply {
-            moveTo(0f, h * 0.72f); lineTo(w * 0.2f, h * 0.64f); lineTo(w * 0.38f, h * 0.71f); lineTo(w * 0.6f, h * 0.62f)
-            lineTo(w * 0.82f, h * 0.7f); lineTo(w, h * 0.64f); lineTo(w, h); lineTo(0f, h); close()
-        }
-        drawPath(front, Color(0xFF1E1430).copy(alpha = 0.7f))
     }
 }
 
@@ -708,7 +704,7 @@ private fun FocusScene(
     overlay: @Composable ColumnScope.() -> Unit,
 ) {
     val (bob, orbit) = sceneMotion(reducedMotion)
-    BoxWithConstraints(modifier.fillMaxWidth().height(440.dp)) {
+    BoxWithConstraints(modifier.fillMaxWidth().height(500.dp)) {
         val w = maxWidth
         if ("obs_nebula" in owned) {
             Canvas(Modifier.fillMaxSize()) {
@@ -722,7 +718,7 @@ private fun FocusScene(
             val inset = 8.dp.toPx()
             val arc = Size(size.width - 2 * inset, size.height - 2 * inset)
             drawArc(AppColors.Lavender.copy(alpha = 0.35f), 0f, 360f, false, Offset(inset, inset), arc, style = stroke)
-            drawArc(RingBlue, -90f, 360f * ringFraction.coerceIn(0f, 1f), false, Offset(inset, inset), arc, style = stroke)
+            drawArc(RingViolet, -90f, 360f * ringFraction.coerceIn(0f, 1f), false, Offset(inset, inset), arc, style = stroke)
         }
         // orbit path
         Canvas(Modifier.fillMaxSize()) {
@@ -735,7 +731,7 @@ private fun FocusScene(
         // station (stages cross-fade as a session progresses or the station levels up)
         Crossfade(
             targetState = stageIndex.coerceIn(0, Art.StationStages.lastIndex),
-            modifier = Modifier.align(Alignment.BottomCenter).offset(y = (bob * 5).dp).size(300.dp),
+            modifier = Modifier.align(Alignment.TopCenter).offset(y = 178.dp + (bob * 5).dp).size(310.dp),
             animationSpec = tween(900),
             label = "station",
         ) { idx ->

@@ -89,6 +89,7 @@ fun PrimaryButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     icon: ImageVector? = null,
+    containerColor: Color = AppColors.Lavender,
 ) {
     Button(
         onClick = onClick,
@@ -96,7 +97,7 @@ fun PrimaryButton(
         modifier = modifier.height(Sizes.buttonHeight),
         shape = RoundedCornerShape(Radii.button),
         colors = ButtonDefaults.buttonColors(
-            containerColor = AppColors.Lavender,
+            containerColor = containerColor,
             contentColor = AppColors.TextPrimary,
             disabledContainerColor = AppColors.Elevated,
             disabledContentColor = AppColors.TextSecondary,
@@ -138,6 +139,7 @@ fun AppChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
+    selectedColor: Color = AppColors.Lavender,
 ) {
     FilterChip(
         selected = selected,
@@ -149,7 +151,7 @@ fun AppChip(
         colors = FilterChipDefaults.filterChipColors(
             containerColor = AppColors.Card,
             labelColor = AppColors.TextSecondary,
-            selectedContainerColor = AppColors.Lavender,
+            selectedContainerColor = selectedColor,
             selectedLabelColor = AppColors.TextPrimary,
         ),
     )

@@ -26,6 +26,7 @@ import com.levelup.app.domain.FocusOutcome
 import com.levelup.app.domain.FocusStatus
 import com.levelup.app.domain.LevelProgress
 import com.levelup.app.domain.Priority
+import com.levelup.app.domain.ProgressMath
 import com.levelup.app.domain.ScoringEngine
 import com.levelup.app.domain.Streaks
 import com.levelup.app.domain.TaskDraft
@@ -349,7 +350,7 @@ class FocusViewModel(private val repo: LevelUpRepository) : ViewModel() {
     fun start(title: String, category: Category?, minutes: Int) {
         viewModelScope.launch {
             lastOutcome.value = null
-            repo.startFocus(title, category, minutes.coerceIn(1, 600) * 60L)
+            repo.startFocus(title, category, minutes.coerceIn(ScoringEngine.MIN_FOCUS_MINUTES, 600) * 60L)
         }
     }
 
@@ -363,62 +364,29 @@ class FocusViewModel(private val repo: LevelUpRepository) : ViewModel() {
 
 // ========================================================== Progress
 
-data class HeatCell(val date: LocalDate, val percent: Int?)
-data class AchievementUi(val def: AchievementDef, val unlockedAt: Long?)
-
-data class ProgressUiState(
-    val rangeDays: Int = 7,
-    val completionBars: List<Pair<String, Int>> = emptyList(),
-    val pointsBars: List<Pair<String, Int>> = emptyList(),
-    val heat: List<HeatCell> = emptyList(),
-    val categoryMinutes: List<Pair<Category, Int>> = emptyList(),
-    val streaks: Streaks = Streaks(0, 0),
-    val focusSessions: Int = 0,
-    val focusMinutes: Int = 0,
-    val achievements: List<AchievementUi> = emptyList(),
-    val hasAnyData: Boolean = false,
-    val loading: Boolean = true,
-)
-
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProgressViewModel(private val repo: LevelUpRepository) : ViewModel() {
     private val range = MutableStateFlow(7)
+    private val offset = MutableStateFlow(0)
 
     val state: StateFlow<ProgressUiState> =
-        combine(range, repo.observeDate()) { r, d -> r to d }.flatMapLatest { (r, today) ->
-            val from = today.minusDays(r - 1L)
+        combine(range, offset, repo.observeDate()) { r, o, d -> Triple(r, o, d) }.flatMapLatest { (r, o, today) ->
+            val window = ProgressMath.window(today, r, o)
+            val from = minOf(window.start, ProgressMath.heatMondays(today).first())
             combine(
-                repo.observeSummaries(), repo.observePointsByDay(from), repo.observeCategoryMinutes(from),
-                repo.observeFocusStats(), repo.observeAchievements(),
-            ) { summaries, points, cats, focus, ach ->
-                val byDate = summaries.associateBy { it.date }
-                val days = (0 until r).map { from.plusDays(it.toLong()) }
-                fun label(i: Int, d: LocalDate) = if (r <= 7 || i % 5 == 0) d.dayOfMonth.toString() else ""
-                val unlocked = ach.associate { it.id to it.unlockedAt }
-                ProgressUiState(
-                    rangeDays = r,
-                    completionBars = days.mapIndexed { i, d ->
-                        val s = byDate[d]
-                        label(i, d) to (if (s == null || s.total == 0) 0 else s.completed * 100 / s.total)
-                    },
-                    pointsBars = days.mapIndexed { i, d -> label(i, d) to (points[d] ?: 0) },
-                    heat = (34 downTo 0).map { back ->
-                        val d = today.minusDays(back.toLong())
-                        val s = byDate[d]
-                        HeatCell(d, if (s == null || s.total == 0) null else s.completed * 100 / s.total)
-                    },
-                    categoryMinutes = cats.entries.sortedByDescending { it.value }.map { it.key to it.value },
-                    streaks = ScoringEngine.calculateStreaks(summaries, today),
-                    focusSessions = focus.first,
-                    focusMinutes = focus.second,
-                    achievements = Achievements.all.map { AchievementUi(it, unlocked[it.id]) },
-                    hasAnyData = summaries.any { it.completed > 0 } || focus.first > 0,
-                    loading = false,
-                )
+                repo.observeSummaries(), repo.observePointsByDay(from), repo.observeFocusByDay(from),
+                repo.observeLifetimeStats(), repo.observeAchievements(),
+            ) { summaries, points, focus, stats, ach ->
+                buildProgressState(r, o, today, summaries, points, focus, stats, ach.associate { it.id to it.unlockedAt })
             }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProgressUiState())
 
-    fun setRange(days: Int) { range.value = days }
+    fun setRange(days: Int) {
+        range.value = days
+        offset.value = 0
+    }
+
+    fun setOffset(periodsBack: Int) { offset.value = periodsBack.coerceAtLeast(0) }
 }
 
 // =========================================================== Rewards

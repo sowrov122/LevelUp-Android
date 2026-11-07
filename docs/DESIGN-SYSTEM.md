@@ -35,7 +35,7 @@ Material roles (`ui/theme/Theme.kt`): `primary` = ProgressBlue (or the equipped 
 | Today | **Phase 2 done**: `AppCard`, `PrimaryButton`/`SecondaryButton`, `ProgressRing`, `ProgressBar`, `ArtImage`, `FlameIcon`; stateless `TodayContent` with tests | none |
 | Routine | **Phase 3 done**: timeline schedule, date strip, summary card, category filter chips, status pills, `CategoryIcon`, Customize mode, editor restyled with `AppChip`; stateless `ScheduleView` with tests | none |
 | Focus | **Phase 4 done**: night-sky backdrop, animated station scene, `IconTile`, `AppChip`, `AppCard`, `PrimaryButton`; stateless `FocusIdleContent` / `FocusRunningContent` with tests | none |
-| Progress | `AppCard`, `BarChart`, `ProgressBar`, `SectionHeader` | Day/Week/Month tabs, achievements list, heatmap colours |
+| Progress | **Phase 5 done**: segmented 7/30 days, period picker, summary tiles, `AxisBarChart`, `HeatmapGrid`, achievement cards with real progress; stateless `ProgressContent` and a pure `buildProgressState` with tests | none |
 | Rewards | `AppCard`, tabs via theme chips, gold coin pill | item cards → shared component, buy buttons → `PrimaryButton`, coin pill → badge |
 | App Blocker | `AppCard`, `PrimaryButton` | many raw `Button`/`OutlinedButton` → `PrimaryButton`/`SecondaryButton`; app rows |
 | Settings | `AppCard` | list-style rows with `IconBadge` |
@@ -65,3 +65,19 @@ shrink unused icons with R8.
   alarm, or the next time the app starts (`finishDueFocusSession`). Paused sessions never become due; cancelled and sub-5-minute sessions earn nothing.
 - Distraction Protection text only says what is true: it never claims apps are blocked, and says so when Usage Access is missing.
 - Animations (bobbing station, orbiting satellite, twinkling stars) stop when "Reduce motion" is on.
+
+## Progress (Phase 5)
+- Every number is built by the pure function `buildProgressState` from stored data only: task history (`DaySummary`), the reward ledger
+  (points per day, floored at 0 like Today), completed focus sessions and lifetime totals. Charts re-render whenever any of those change.
+- Completion % = tasks completed / tasks scheduled that day. Daily points = ledger points of that day (rewards, bonuses, focus, minus penalties).
+- Heat map levels: None, Low 1-25%, Medium 26-75%, High 76-100% of that day's tasks; a focus session lifts an empty day to Low. Future days stay empty.
+- 7 days / 30 days and a period picker (this period and the three before it). Focus time and sessions follow the chosen window; streaks are lifetime.
+- Achievements now show progress toward a target (tasks, focus hours, streak days, total XP, study hours, level) and grant XP and coins once when completed.
+  The "Achievements" XP is part of the ledger, so total XP and the XP Collector milestone include it.
+- `ProgressConsistencyTest` (device) rebuilds the screen from a real database and compares it with the ledger, instances and sessions.
+
+## Focus Mode update
+- Station levels are driven by total completed focus minutes: Lv.2 5 min, Lv.3 10 min, Lv.4 40 min, Lv.5 100 min, Lv.6 160 min (see `StationProgress`).
+- Before a session the station is shown complete; while a session runs it is drawn for "minutes focused so far + this session", so a new
+  session starts at the level already earned (for example level 3 after a completed 10-minute session) and keeps growing.
+- Minimum focus session is 10 minutes (shorter sessions earn nothing); custom lengths run from 10 to 180 minutes.
